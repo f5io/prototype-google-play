@@ -1,0 +1,35 @@
+{
+  "name": "leo-collage",
+  "version": "0.0.1",
+  "browserify": {
+    "transform": [
+      "browserify-shim"
+    ]
+  },
+  "browser": {
+    "stats": "./lib/stats.js",
+    "interpol": "./lib/interpol.js"
+  },
+  "browserify-shim": {
+    "stats": "Stats",
+    "interpol": "Interpol"
+  },
+  "devDependencies": {
+    "browserify": "^6.1.0",
+    "browserify-shim": "^3.8.0",
+    "compression": "^1.2.0",
+    "connect-inject": "^0.3.2",
+    "express": "^4.9.8",
+    "gulp": "^3.8.8",
+    "gulp-autoprefixer": "^1.0.1",
+    "gulp-livereload": "^2.1.1",
+    "gulp-minify-css": "^0.3.11",
+    "gulp-plumber": "^0.6.6",
+    "gulp-rename": "^1.2.0",
+    "gulp-sass": "^1.2.0",
+    "gulp-uglify": "^1.0.1",
+    "gulp-util": "^3.0.1",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.0.0"
+  }
+}
