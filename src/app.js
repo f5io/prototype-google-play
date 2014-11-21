@@ -1,322 +1,228 @@
-var $ = require('./modules/utilites'); // THIS IS NOT JQUERY
+/*
+ *
+ * Google Ad Prototype 2014
+ * @author: Joe Harlow
+ *
+ */
+
+/* General Utilites */
+var $ = require('./modules/utilities'); // THIS IS NOT JQUERY
+
+/* Import our modules */
 var Config = require('./modules/config');
 var Cube = require('./modules/cube');
 var Orient = require('./modules/orient');
-var Sound = require('./modules/sound');
 var Messaging = require('./modules/messaging');
-var Stats = require('stats');
-var Interpol = require('interpol');
+var Background = require('./modules/background');
+var AssetManager = require('./modules/assetmanager');
+var Debug = require('./modules/debug');
 
+/* Import Libraries */
+var Stats = require('stats'); // https://github.com/mrdoob/stats.js
+var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
+
+/* DOM Ready Event Handler */
 $.ready(function() {
-
-    var cube = new Cube(125, 125);
-
-    Orient(cube, determineCalculation, getAxis);
-
-    if (Config.useAccelerometer) Orient.listen();
-
-    var sound = new Sound('assets/sound/click.mp3');
-
-    $('button').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            if (Config.useMessaging) Messaging.post('button_interaction');
-        });
-    });
-
-    // $('input[type="text"]').forEach(function(input) {
-    //     input.addEventListener('change', function() {
-    //         cube.rotation[this.name] = parseInt(this.value, 10);
-    //         cube.render();
-    //     });
-    // });
-
-    var panel = $('.checkboxes')[0];
-
-    $('.checkboxes a').forEach(function(a) {
-        a.addEventListener('click', function(e) {
-            e.preventDefault();
-            panel.classList.toggle('open');
-            cube.element.classList.toggle('disabled');
-            if (a.innerText === 'Open Controls') {
-                a.innerText = 'Close Controls';
-            } else {
-                a.innerText = 'Open Controls';
-            }
-        });
-    });
-
-    $('input[type="checkbox"]').forEach(function(checkbox) {
-        checkbox.checked = Config[checkbox.name];
-        checkbox.addEventListener('change', function() {
-            Config[checkbox.name] = checkbox.checked;
-            switch (checkbox.name) {
-                case 'useBackgrounds':
-                case 'useContent':
-                case 'useVideo':
-                case 'useGif':
-                case 'normaliseFacialRotation':
-                    cube.remove();
-                    cube = new Cube();
-                    cube.element.addEventListener('touchstart', touchStart);
-                    cube.element.classList.add('disabled');
-                    cube.render();
-                    Orient(cube, determineCalculation, getAxis);
-                    break;
-            }
-        });
-    });
-
-    var fps = new Stats();
-    fps.domElement.style.position = 'absolute';
-    fps.domElement.style.right = '0px';
-    fps.domElement.style.top = '0px';
-
-    var ms = new Stats();
-    ms.setMode(1);
-    ms.domElement.style.position = 'absolute';
-    ms.domElement.style.right = '80px';
-    ms.domElement.style.top = '0px';
-
-    document.body.appendChild(fps.domElement);
-    document.body.appendChild(ms.domElement);
-
-    Interpol.pipeline.add('stats', function() {
-        fps.update();
-        ms.update();
-    });
-
-    var bX, bY, cX, cY,
-        axis, axisLR, axisUD, axisMid,
-        direction, dirX, dirY, rDirection, oRDirection,
-        current, change, oChange,
-        hasMoved = false, changedDirection = false,
-        endTween, interactedSide;
-
-    var moveStartTime, msX, msY;
-
-    function touchStart(e) {
-
-        hasMoved = false;
-
-        var touch = e.changedTouches[0];
-        bX = touch.clientX;
-        bY = touch.clientY;
-        cX = bX;
-        cY = bY;
-
-        changedDirection = false;
-
-        if (endTween) {
-            endTween.stop();
-        } else {
-            interactedSide = cube.getSideFromTarget(touch.target);
-        }
-
-        current = $.extend({}, cube.rotation);
-
-        console.log(current);
-
-        var axisDef = getAxis();
-
-        axisLR = axisDef.LR;
-        axisUD = axisDef.UD;
-        axisMid = ['X', 'Y', 'Z'].filter(function(val) {
-            return val !== axisLR && val !== axisUD;
-        })[0];
-
-        velocity = amplitude = 0;
-        change = oChange = 0;
-        timestamp = Date.now();
-
-        document.addEventListener('touchmove', touchMove);
-        document.addEventListener('touchend', touchEnd);
-    }
-
-    function touchMove(e) {
-        //e.stopPropagation();
-        e.preventDefault();
-
-        if (Config.useAccelerometer) Orient.detach();
-
-        hasMoved = true;
-
-        var touch = e.changedTouches[0];
-
-        dirX = touch.clientX < cX ? 'left' : 'right';
-        dirY = touch.clientY < cY ? 'up' : 'down';
-
-        cX = touch.clientX;
-        cY = touch.clientY;
-
-        var dX = (bX - cX) / ((cube.width) / 90);
-        var dY = (bY - cY) / ((cube.height) / 90);
-        var adX = Math.abs(dX);
-        var adY = Math.abs(dY);
-
-        if (Math.max(adX, adY) < 1) return;
-
-        if (!$.isDefined(axis)) {
-            direction = adX > adY ? 'leftright' : 'updown';
-            axis = direction === 'leftright' ? axisLR : axisUD;
-            if (Config.normaliseFacialRotation) cube.normalizeOppositeSide(interactedSide, direction);
-        }
-
-        oRDirection = rDirection;
-        rDirection = direction === 'leftright' ? dirX : dirY;
-
-        if (oRDirection !== rDirection) {
-            changedDirection = true;
-            moveStartTime = Date.now();
-            msX = cX;
-            msY = cY;
-        }
-
-        change = direction === 'leftright' ? dX : dY;
-        change = determineCalculation(change);
-
-        if (!Interpol.pipeline.has('render')) {
-            Interpol.pipeline.add('render', function() {
-                var oldRot = cube.rotation[axis];
-                var newRot = Math.round(current[axis] + change);
-                var nNearest = $.nearest(newRot, 90);
-                var oNearest = $.nearest(oldRot, 90);
-                if (nNearest !== oNearest && Config.useSound) sound.play();
-                cube.rotation[axis] = newRot;
-                cube.render();
-            });
-        }
-
-    }
-
-    function touchEnd(e) {
-        document.removeEventListener('touchmove', touchMove);
-        document.removeEventListener('touchend', touchEnd);
-
-        if (!hasMoved) return;
-
-        if (Interpol.pipeline.has('render')) Interpol.pipeline.remove('render');
-
-        var touch = e.changedTouches[0];
-        var endTime = Date.now();
-        var emX = touch.clientX;
-        var emY = touch.clientY;
-
-        var dmX = emX - msX;
-        var dmY = emY - msY;
-        var diffDistance = direction === 'leftright' ? dmX : dmY;
-        var diffTime = endTime - moveStartTime;
-
-        diffDistance = diffDistance < 0 && (rDirection === 'right' || rDirection === 'down') ? Math.abs(diffDistance) : diffDistance;
-        diffDistance = diffDistance > 0 && (rDirection === 'left' || rDirection === 'up') ? -diffDistance : diffDistance;
-
-        var velocity = diffDistance / diffTime;
-        var velMin = Math.abs(diffDistance) < (cube.width * 0.8) / 2 ? 1 : 0;
-
-        var bV = current[axis];
-        var cV = cube.rotation[axis];
-
-        var val = $.nearest(cV, 90);
-        var perc = 1;
-
-        if (Config.useInertia) {
-            val = val - determineCalculation(Math[velocity < 0 ? 'min' : 'max'](velocity < 0 ? -(velMin) : velMin, Math.round(velocity * 2)) * 90);
-            perc = Math.abs(val - cV) / 90;
-        } else {
-            if (direction === 'updown') {
-                val = (dirY === 'up') ? bV + determineCalculation(90) : bV - determineCalculation(90);
-            } else {
-                val = (dirX === 'left') ? bV + determineCalculation(90) : bV - determineCalculation(90);
-            }
-        }
-
-        var from = { rot: cV };
-        var to = { rot: val };
-
-        var fixes = ['X', 'Y', 'Z'].filter(function(val) { return val !== axis; });
-        fixes.forEach(function(val) {
-            from['fix' + val] = cube.rotation[val];
-            to['fix' + val] = $.nearest(cube.rotation[val], 90);
-        });
-
-        var oldV;
-        endTween = Interpol.tween()
-            .from(from)
-            .to(to)
-            .duration(Math.round(300 * perc))
-            .ease(Interpol.easing.easeOutCirc)
-            .step(function(obj) {
-                oldV = oldV || obj.rot;
-                var nNearest = $.nearest(obj.rot, 90);
-                var oNearest = $.nearest(oldV, 90);
-                if (nNearest !== oNearest && Config.useSound) sound.play();
-                cube.rotation[axis] = obj.rot;
-                fixes.forEach(function(val) {
-                    cube.rotation[val] = obj['fix' + val];
-                });
-                cube.render();
-                oldV = obj.rot;
-            })
-            .complete(function(obj) {
-                cube.rotation[axis] = norm(obj.rot % 360);
-                fixes.forEach(function(val) {
-                    cube.rotation[val] = norm(obj['fix'+ val] % 360);
-                });
-                cube.render();
-                endTween = undefined;
-                axis = undefined;
-                if (Config.normaliseFacialRotation) cube.normalizeFace();
-                if (Config.useAccelerometer) Orient.reset(Orient.listen);
-            })
-            .start();
-
-    }
-
-    function determineCalculation(val) {
-        var r = cube.rotation;
-        var rX = Math.abs($.nearest(r.X, 90)),
-            rY = Math.abs($.nearest(r.Y, 90));
-
-        if (direction === 'leftright') {
-            if (
-                (rX === 180 && axis === 'Y') ||
-                (rX === 90 && rY === 0) ||
-                (rX === 270 && (axis !== 'Z' || rY === 180))
-            ) {
-                return val;
-            } else {
-                return -val;
-            }
-        } else {
-            if (rY === 270) {
-                return -val;
-            } else {
-                return val;
-            }
-        }
-    }
-
-    function getAxis() {
-        var r = cube.rotation;
-
-        var ncX = Math.abs($.nearest(r.X, 90));
-        var ncY = Math.abs($.nearest(r.Y, 90));
-
-        return {
-            LR: ncX === 90 || ncX === 270 ? 'Z' : 'Y',
-            UD: ncY === 90 || ncY === 270 ? 'Z' : 'X'
-        };
-    }
-
-
-    function norm(deg) {
-        if (deg >= 0) return deg;
-        return 360 - Math.abs(deg);
-    }
-
     
-    document.addEventListener('touchmove', $.prevent);
+    /* Let's preload all the assets we are going to need */
+    AssetManager.add([
+        'assets/sound/click.mp3',
+        'assets/img/playlogo-sml.png',
+        'assets/img/cubes/main/side1.jpg',
+        'assets/img/cubes/main/side2.jpg',
+        'assets/img/cubes/main/side3.jpg',
+        'assets/img/cubes/main/side4.jpg',
+        'assets/img/cubes/main/side5.jpg',
+        'assets/img/cubes/main/side6.jpg',
+        'assets/img/cubes/cube01/side1.jpg',
+        'assets/img/cubes/cube01/side2.jpg',
+        'assets/img/cubes/cube01/side3.jpg',
+        'assets/img/cubes/cube01/side4.jpg',
+        'assets/img/cubes/cube01/side5.jpg',
+        'assets/img/cubes/cube01/side6.jpg',
+        'assets/img/cubes/cube02/side1.jpg',
+        'assets/img/cubes/cube02/side2.jpg',
+        'assets/img/cubes/cube02/side3.jpg',
+        'assets/img/cubes/cube02/side4.jpg',
+        'assets/img/cubes/cube02/side5.jpg',
+        'assets/img/cubes/cube02/side6.jpg',
+        'assets/img/cubes/cube03/side1.jpg',
+        'assets/img/cubes/cube03/side2.jpg',
+        'assets/img/cubes/cube03/side3.jpg',
+        'assets/img/cubes/cube03/side4.jpg',
+        'assets/img/cubes/cube03/side5.jpg',
+        'assets/img/cubes/cube03/side6.jpg',
+        'assets/img/cubes/cube04/side1.jpg',
+        'assets/img/cubes/cube04/side2.jpg',
+        'assets/img/cubes/cube04/side3.jpg',
+        'assets/img/cubes/cube04/side4.jpg',
+        'assets/img/cubes/cube04/side5.jpg',
+        'assets/img/cubes/cube04/side6.jpg'
+    ]).preload().then(function() {
 
-    cube.element.addEventListener('touchstart', touchStart);
-    cube.render();
+        /* All assets are preloaded */
+        var cubes = {},
+            bigcube, bigrot,
+            cubeView = $('[role="cube"]')[0];
+
+        /* Initialise the Debug Panel */
+        Debug.init();
+
+        /* Create and initialise the Background Animation */
+        var bg = Object.create(Background);
+        bg.init($('[role="background"]')[0]);
+
+        /* Setup Accelerometer orientation listeners */
+        // Orient($('[role="main"]')[0]).listen();
+
+        /* If we are gamifying the ad, load 4 little cubes instead of one big one */
+        if (Config.global.useGamification) {
+            initialiseFourCubes();
+        } else {
+            initialiseBigCube();
+        }
+
+        /* 
+         * Subscribe to the `global_config_change` event, if the value of 
+         * `useGamification` changes then we swap out the cubes.
+         */
+        $.emitter.on('global_config_change', function(key, value) {
+            if (key === 'useGamification') {
+                clearCube();
+                if (value) initialiseFourCubes();
+                else initialiseBigCube();
+            }
+
+            // if (key === 'useAccelerometer') {
+            //     if (value) Orient.listen();
+            //     else Orient.detach();
+            // }
+        });
+
+        /*
+         * Subscribe to the `rotation_complete` event on the gamified 4 cubes,
+         * check to see if the currents faces are the same index, then check
+         * to see if they all have the same rotation or are normalised.
+         */
+        $.emitter.on('rotation_complete', function() {
+
+            /* Take the cubes hash map and convert it to a flat array */
+            var cbs = Object.keys(cubes).map(function(id) {
+                return cubes[id];
+            });
+
+            /* Check to see if the cubes have normalised facial rotation */
+            var isNormalised = cbs.some(function(cube) {
+                return cube.config.normaliseFacialRotation;
+            });
+
+            /* Get the current visible faces */
+            var faces = cbs.map(function(cube, i) {
+                var el = cube.element;
+                /* Approximate the center of the cube on screen */
+                var x = el.offsetLeft + (el.offsetWidth / 2);
+                var y = el.offsetTop + (el.offsetHeight / 2);
+
+                /*
+                 * Using DOM API get the element from approximated point, then
+                 * traverse the tree upwards until we find a `Face`.
+                 */
+                var face = cube.getFaceFromTarget(document.elementFromPoint(x, y));
+
+                return { face: face, cube: cube };
+            });
+
+            var sameRot = false, sameFaceRot = false;
+
+            /* Check if all current visible faces have the same index */
+            sameRot = faces.every(function(c, i, arr) {
+                if (i === 0) return true;
+                var f1 = arr[i - 1].face, f2 = c.face;
+                return f1.index === f2.index;
+            });
+
+            /* 
+             * If all faces are the same index, and the cube faces are
+             * not normalised, check if the faces are the same orientation.
+             */
+            if (sameRot && !isNormalised) {
+                sameFaceRot = faces.every(function(c, i, arr) {
+                    var r = c.cube.rotation;
+                    var f = c.face.index;
+
+                    /* Get the value of rotation on the Z axis from the normalisation matrix */
+                    var rZ = c.cube.getNormalisedFaceRotation(r, f);
+                    return rZ === 0;
+                });
+            }
+
+            /* 
+             * If all visible faces have the same index and either all faces are
+             * correctly oriented OR the cubes are normalised, set `bigrot` to the
+             * current rotation of the first cube and turn of `useGamification` in the config.
+             */
+            if (sameRot && (sameFaceRot || isNormalised)) {
+                bigrot = $.clone(cbs[0].rotation);
+                Config.global.useGamification = false;
+            }
+
+        });
+
+        /*
+         *  initialiseFourCubes - Initialises the gamified ad with 4 cubes
+         *  and passes their configs into the Debug panel.
+         */
+        function initialiseFourCubes() {
+            var configs = [];
+            for (var i = 0; i < 4; i++) {
+                var cube = Object.create(Cube);
+                cube.init(125, 125, i, 'cube0' + (i + 1), cubeView);
+                cubes[cube.id] = cube;
+                cube.element.style.left = $.isOdd(i + 1) ? '-125px' : '125px';
+                cube.element.style.top = i < 2 ? '-125px' : '125px';
+                if (Config.global.useGamification) {
+                    cube.rotation.X = $.getRandomRotation([0, 180]);
+                    cube.rotation.Y = $.getRandomRotation([90, 270]);
+                    cube.rotation.Z = $.getRandomRotation();
+                    cube.render();
+                }
+                configs.push(cube);
+            }
+
+            Debug.defineCubeProperties(configs);
+        }
+
+        /*
+         *  initialiseBigCube - Initialises the single large cube and passes
+         *  its config into the Debug panel.
+         */
+        function initialiseBigCube() {
+            bigcube = Object.create(Cube);
+            bigcube.init(250, 250, 0, 'main', cubeView, {
+                useInertia: true,
+                useBackgrounds: true,
+                useContent: false,
+                isSequential: false,
+                normaliseFacialRotation: true
+            });
+            bigcube.rotation = bigrot || bigcube.rotation;
+            bigcube.getNormalisedFaceRotation(bigcube.rotation, true);
+            bigcube.render();
+
+            Debug.defineCubeProperties([bigcube]);
+        }
+
+        /*
+         *  clearCube - Clears the cube view and emptys the cube hash map.
+         */
+        function clearCube() {
+            cubeView.innerHTML = '';
+            cubes = {};
+        }
+
+        /* Let's prevent the horrible over scroll on mobile devices */
+        document.addEventListener('touchmove', $.prevent);
+
+    });
 
 });

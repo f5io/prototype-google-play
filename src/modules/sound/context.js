@@ -1,1 +1,0 @@
-module.exports = window.AudioContext || window.webAudioContext || window.webkitAudioContext;

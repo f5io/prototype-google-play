@@ -12,7 +12,7 @@ app.use((function() {
 	return inject({
 		snippet : ['<script>',
 					// '<![CDATA[',
-						"document.write('<script src=\"//' + (location.hostname || 'localhost') + ':8080/target/target-script-min.js\"><\\/script>');",
+						//"document.write('<script src=\"//' + (location.hostname || 'localhost') + ':8080/target/target-script-min.js\"><\\/script>');",
 						"document.write('<script src=\"//' + (location.hostname || 'localhost') + ':35729/livereload.js\"><\\/script>');",
 					// ']]>',
 					'</script>'].join('\n')

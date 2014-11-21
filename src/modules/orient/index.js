@@ -1,22 +1,34 @@
-var $ = require('../utilites');
-var ValueBuffer = require('./valuebuffer');
+var $ = require('../utilities');
 var Interpol = require('interpol');
-var cube, deterCalc, getAxis;
-var gammaBuffer, betaBuffer;
 var initialValues = { gamma: 0, beta: 0 };
+var cachedValues = { gamma: 0, beta: 0 };
+var prevValues = { gamma: 0, beta: 0 };
+
+var elem;
 
 function handler(e) {
-	gammaBuffer.update(initialValues.gamma - e.gamma);
-	betaBuffer.update(initialValues.beta - e.beta);
+	console.log('handler');
+
+	prevValues.gamma = cachedValues.gamma;
+	prevValues.beta = cachedValues.beta;
+
+	cachedValues.gamma = initialValues.gamma - e.gamma;
+	cachedValues.beta = initialValues.beta - e.beta;
 }
 
 function render() {
-	var axis = getAxis();
-	var betaAvg = betaBuffer.smooth(4.3);
-	var gammaAvg = gammaBuffer.smooth(4.3);
-	cube.rotation[axis.UD] = $.nearest(cube.rotation[axis.UD], 90) + deterCalc(Math[betaAvg > 0 ? 'min' : 'max'](betaAvg > 0 ? 30 : -30, betaAvg / 1.2));
-	cube.rotation[axis.LR] = $.nearest(cube.rotation[axis.LR], 90) - deterCalc(Math[gammaAvg > 0 ? 'min' : 'max'](gammaAvg > 0 ? 30 : -30, gammaAvg / 1.2));
-	cube.render();
+
+	var dt = 1 / 60;
+	var RC = 0.3;
+	var alpha = dt / (RC + dt);
+
+	var rX = (alpha * cachedValues.beta) + (1 - alpha) * prevValues.beta;
+	var rY = (alpha * cachedValues.gamma) + (1 - alpha) * prevValues.gamma;
+
+	rX *= 0.5;
+	rY *= 0.5;
+
+	elem.style[$.CSS_TRANSFORM] = 'rotateX(' + rX.toFixed(3) + 'deg) rotateY(' + rY.toFixed(3) + 'deg)';
 }
 
 function getInitialValues(callback) {
@@ -28,17 +40,15 @@ function getInitialValues(callback) {
 	});
 }
 
-function Orient(c, dc, ga) {
-	cube = c;
-	deterCalc = dc;
-	getAxis = ga;
-	gammaBuffer = new ValueBuffer(10);
-	betaBuffer = new ValueBuffer(10);
+function Orient(el) {
+	console.log('orient');
+	elem = el;
 	getInitialValues();
 	return Orient;
 }
 
-Orient.listen = function(reset) {
+Orient.listen = function() {
+	console.log('orient listen');
 	window.addEventListener('deviceorientation', handler);
 	Interpol.pipeline.add('orient', render);
 	return Orient;
@@ -51,8 +61,6 @@ Orient.detach = function() {
 };
 
 Orient.reset = function(fn) {
-	betaBuffer.clear();
-	gammaBuffer.clear();
 	getInitialValues(fn);
 	return Orient;
 };
