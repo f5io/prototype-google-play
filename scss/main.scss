@@ -1,15 +1,13 @@
 @import 'partials/mixins';
 
 @include keyframes(rotate) {
-    0% {
-        transform: rotateY(0deg);
-    }
-    50% {
-    	transform: rotateY(360deg) rotateX(0deg);
-    }
-    100% {
-        transform: rotateY(360deg) rotateX(360deg);
-    }
+    0% { 
+		transform: perspective(120px) rotateX(0deg) rotateY(0deg);
+	} 50% { 
+		transform: perspective(120px) rotateX(-180.1deg) rotateY(0deg);
+	} 100% { 
+		transform: perspective(120px) rotateX(-180deg) rotateY(-179.9deg);
+	}
 }
 
 * {
@@ -73,7 +71,36 @@ a {
 	transform: translate3d(0, 0, 750px);
 }
 
+[role="loader"] {
+	position: absolute;
+	top: 0; bottom: 0;
+	left: 0; right: 0;
+	margin: auto;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(black, 0.6);
+	transition: opacity 0.3s ease-out;
+	opacity: 1;
 
+	& > div {
+		position: absolute;
+		top: 0; bottom: 0;
+		left: 0; right: 0;
+		margin: auto;
+		width: 50px;
+		height: 50px;
+		background: white;
+
+		//margin: 100px auto;
+		animation: rotate 1.2s infinite ease-in-out;
+	}
+
+	&.off {
+		opacity: 0;
+	}
+
+	
+}
 
 [role="debug"] {
 	width: 100vw;

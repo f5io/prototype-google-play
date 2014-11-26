@@ -24,6 +24,11 @@ var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Sli
 
 /* DOM Ready Event Handler */
 $.ready(function() {
+
+    var mainView = $('[role="main"]')[0],
+        cubeView = $('[role="cube"]')[0],
+        loadView = $('[role="loader"')[0],
+        bgView = $('[role="background"]')[0];
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
@@ -61,13 +66,12 @@ $.ready(function() {
         'assets/img/cubes/cube04/side6.jpg'
     ]).preload().then(function() {
 
+        loadView.className = 'off';
+
         /* All assets are preloaded */
         var cubes = {},
-            bigcube, bigrot,
-            mainView = $('[role="main"]')[0],
-            cubeView = $('[role="cube"]')[0],
-            bgView = $('[role="background"]')[0];
-
+            bigcube, bigrot;
+            
         /* Initialise the Debug Panel */
         Debug.init();
 
@@ -243,7 +247,7 @@ $.ready(function() {
                 .delay((4 - index) * 200)
                 .from(from)
                 .to(to)
-                .ease(Interpol.easing[index < 2 ? 'easeOutBounce' : 'easeOutBack'])
+                .ease(Interpol.easing[index < 2 ? 'easeOutCirc' : 'easeOutBack'])
                 .step(function(val) {
                     container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateY\(.+\)/g, function() {
                         return 'translateY(' + val + 'px)';
