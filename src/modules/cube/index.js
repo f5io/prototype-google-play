@@ -5,8 +5,10 @@
  *
  */
 
-/* Import modules */
+/* General Utilities */
 var $ = require('../utilities');
+
+/* Import modules */
 var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
@@ -24,6 +26,25 @@ var Cube = Object.create(Common);
  *  @return {HTMLElement} - A HTML Element.
  */
 Cube.getElement = function() {
+    // var styles = {
+    //     width: $.windowWidth() / 2 + 'px',
+    //     height: $.windowHeight() / 2 + 'px'
+    // };
+
+    // // var tx = ($.isOdd(this.index + 1) ? -(this.width * 1.3) : 0) + 'px';
+    // // var ty = (this.index < 2 ? -(this.height * 1.3) : 0) + 'px';
+
+    // // styles[$.CSS_TRANSFORM] = 'translate(' + tx + ',' + ty + ')';
+
+    // var mask = $.getElement('div', 'cube-mask', {}, styles);
+
+    // this.target.appendChild(mask);
+
+    // /* Translate the Cube on the z axis */
+    // this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
+
+    // this.target = mask;
+
     return $.getElement('div', 'cube', { index: this.index }, {
         width: this.width + 'px',
         height: this.height + 'px'
@@ -127,17 +148,23 @@ Cube.init = function(width, height, index, name, target, config) {
     var decouple;
 
     /* On document `touchstart` subscribe to an event fired when a `touchmove` moves over this cube */
-    document.addEventListener('touchstart', function() {
-        decouple = $.emitter.on(_self.id, function(e) {
-            decouple = decouple();
-            touchStart(e);
-        });
-    });
+    document.addEventListener('touchstart', addCubeChangeListener);
 
     /* On document `touchend` decouple the subscription */
     document.addEventListener('touchend', function() {
         if (decouple) decouple();
     });
+
+    /*
+     *  addCubeChangeListener [private] - Add a listener for when the cube has been touched
+     *  after another cube was interacted with.
+     */
+    function addCubeChangeListener() {
+        decouple = $.emitter.on(_self.id, function(e) {
+            if (decouple) decouple = decouple();
+            touchStart(e);
+        });
+    }
 
     /*
      *  touchStart [private] - Event handler for Cube `touchstart`.
@@ -221,8 +248,13 @@ Cube.init = function(width, height, index, name, target, config) {
         if (side) {
             var id = side.getAttribute('parent');
             if (id !== _self.id) {
-                $.emitter.emit(id, $.extend({}, e, { target: elem }));
-                touchEnd(e);
+                var onAnimComplete = function() {
+                    $.emitter.emit(id, $.extend({}, e, { target: elem }));
+                };
+
+                touchEnd($.extend({}, e, { onAnimComplete: onAnimComplete }));
+                // $.emitter.emit(id, $.extend({}, e, { target: elem }));
+                // touchEnd(e);
                 return;
             }
         } else if (!_self.config.useInertia) {
@@ -294,7 +326,10 @@ Cube.init = function(width, height, index, name, target, config) {
         document.removeEventListener('touchend', touchEnd);
 
         /* If the Cube is sequential or there has been no movement, immediately readd the event handler to the Cube */
-        if (!_self.config.isSequential || !hasMoved) _self.element.addEventListener('touchstart', touchStart);
+        if (!_self.config.isSequential || !hasMoved) {
+            _self.element.addEventListener('touchstart', touchStart);
+            addCubeChangeListener();
+        }
 
         /* If no movement exit out of this function early */
         if (!hasMoved) {
@@ -352,12 +387,14 @@ Cube.init = function(width, height, index, name, target, config) {
         var from = currentValue;
         var to = val;
 
+        var time = 'onAnimComplete' in e ? 100 : 300;
+
         /* Define the animation and start it immediately */
-        var oldV;
+        var oldV, dispatchedAnimComplete = false;
         endTween = Interpol.tween()
             .from(from)
             .to(to)
-            .duration(Math.round(300 * perc))
+            .duration(Math.round(time * perc))
             .ease(Interpol.easing.easeOutCirc)
             .step(function step(val) {
                 oldV = oldV || val;
@@ -371,17 +408,33 @@ Cube.init = function(width, height, index, name, target, config) {
                 _self.rotation[axis] = val;
                 _self.render();
                 oldV = val;
+
+                /*
+                 * Check if this touchEnd has been fired because we moved over a different
+                 * cube. If we are less than 10 degrees away from our target rotation, begin
+                 * interacting with the next cube.
+                 */
+                if ('onAnimComplete' in e) {
+                    var diff = Math.abs(to - val);
+                    if (diff <= 10 && !dispatchedAnimComplete) {
+                        dispatchedAnimComplete = true;
+                        e.onAnimComplete();
+                    }
+                }
             })
             .complete(function complete(val) {
                 _self.rotation[axis] = $.norm($.nearest(val, 90) % 360);
                 _self.render();
                 dispatchRotationComplete();
-                if (_self.config.isSequential) _self.element.addEventListener('touchstart', touchStart);
+                if (_self.config.isSequential) {
+                    _self.element.addEventListener('touchstart', touchStart);
+                    addCubeChangeListener();
+                }
                 /* Reset variables */
                 axis = undefined;
                 rDirection = undefined;
                 endTween = undefined;
-                /* Normalise Face rotation based on new rotation */
+                /* Normalise Face rotation based on new cube rotation */
                 normaliseFaces(_self.rotation);
             })
             .start();

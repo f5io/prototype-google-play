@@ -3,9 +3,10 @@
  * Google Ad Prototype 2014
  * @author: Joe Harlow
  *
+ * All code (except libs) (c) Copyright 2014 - Essence Digital. Please do not reproduce.
  */
 
-/* General Utilites */
+/* General Utilities */
 var $ = require('./modules/utilities'); // THIS IS NOT JQUERY
 
 /* Import our modules */
@@ -63,17 +64,19 @@ $.ready(function() {
         /* All assets are preloaded */
         var cubes = {},
             bigcube, bigrot,
-            cubeView = $('[role="cube"]')[0];
+            mainView = $('[role="main"]')[0],
+            cubeView = $('[role="cube"]')[0],
+            bgView = $('[role="background"]')[0];
 
         /* Initialise the Debug Panel */
         Debug.init();
 
         /* Create and initialise the Background Animation */
         var bg = Object.create(Background);
-        bg.init($('[role="background"]')[0]);
+        bg.init(bgView);
 
         /* Setup Accelerometer orientation listeners */
-        // Orient($('[role="main"]')[0]).listen();
+        // Orient(mainView).listen();
 
         /* If we are gamifying the ad, load 4 little cubes instead of one big one */
         if (Config.global.useGamification) {
@@ -159,7 +162,7 @@ $.ready(function() {
             /* 
              * If all visible faces have the same index and either all faces are
              * correctly oriented OR the cubes are normalised, set `bigrot` to the
-             * current rotation of the first cube and turn of `useGamification` in the config.
+             * current rotation of the first cube and turn off `useGamification` in the config.
              */
             if (sameRot && (sameFaceRot || isNormalised)) {
                 bigrot = $.clone(cbs[0].rotation);
@@ -173,10 +176,13 @@ $.ready(function() {
          *  and passes their configs into the Debug panel.
          */
         function initialiseFourCubes() {
+
             var configs = [];
             for (var i = 0; i < 4; i++) {
+                var cubeContainer = $.getElement('div', 'cube-container', {}, {});
+                cubeView.appendChild(cubeContainer);
                 var cube = Object.create(Cube);
-                cube.init(125, 125, i, 'cube0' + (i + 1), cubeView);
+                cube.init(125, 125, i, 'cube0' + (i + 1), cubeContainer);
                 cubes[cube.id] = cube;
                 cube.element.style.left = $.isOdd(i + 1) ? '-125px' : '125px';
                 cube.element.style.top = i < 2 ? '-125px' : '125px';
@@ -186,6 +192,7 @@ $.ready(function() {
                     cube.rotation.Z = $.getRandomRotation();
                     cube.render();
                 }
+                animateCubeIn(cubeContainer, i);
                 configs.push(cube);
             }
 
@@ -218,6 +225,31 @@ $.ready(function() {
         function clearCube() {
             cubeView.innerHTML = '';
             cubes = {};
+        }
+
+        /*
+         *  animateCubeIn [private] - Animate the cube in from outside of the screen.
+         *  @param {container} - A Cube containing HTML Element.
+         *  @param {index} - The index of the Cube for sequential animation.
+         */
+        function animateCubeIn(container, index) {
+
+            var from = -($.windowHeight() * 0.8),
+                to = 0;
+
+            container.style[$.CSS_TRANSFORM] += ' translateY(' + from + 'px)';
+
+            Interpol.tween()
+                .delay((4 - index) * 200)
+                .from(from)
+                .to(to)
+                .ease(Interpol.easing[index < 2 ? 'easeOutBounce' : 'easeOutBack'])
+                .step(function(val) {
+                    container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateY\(.+\)/g, function() {
+                        return 'translateY(' + val + 'px)';
+                    });
+                })
+                .start();
         }
 
         /* Let's prevent the horrible over scroll on mobile devices */

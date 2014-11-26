@@ -5,6 +5,7 @@
  *
  */
 
+/* General Utilites */
 var $ = require('../utilities');
 
 /* Define the common component functions which will be `super`ed by the component classes */
@@ -27,7 +28,9 @@ var Common = {
         this.rotation = {
             X: 0, Y: 0, Z: 0
         };
-        this.offset = 0;
+        this.translate = {
+            X: 0, Y: 0, Z: 0
+        };
         this.element = this.getElement();
         this.target.appendChild(this.element);
     },
@@ -46,7 +49,9 @@ var Common = {
         this.element.style[$.CSS_TRANSFORM] = 'rotateX(' + this.rotation.X + 'deg) ' +
             'rotateY(' + this.rotation.Y + 'deg) ' +
             'rotateZ(' + this.rotation.Z + 'deg) ' +
-            'translateZ(' + this.offset + 'px)';
+            'translateX(' + this.translate.X + 'px) ' +
+            'translateY(' + this.translate.Y + 'px) ' +
+            'translateZ(' + this.translate.Z + 'px)';
     },
     /*
      *  remove - Remove the components `element` from it's `target`.

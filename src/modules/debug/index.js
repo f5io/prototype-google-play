@@ -7,7 +7,7 @@ var cubeUl;
 
 function init() {
 
-	//addMetrics();
+	addMetrics();
 
 	var target = $('[role="debug"]')[0];
 
@@ -101,15 +101,20 @@ function addMetrics() {
     target.appendChild(fps.domElement);
     target.appendChild(ms.domElement);
 
-    Interpol.pipeline.add('stats', function() {
+    function update() {
         fps.update();
         ms.update();
-    });
+    }
+
+    fps.domElement.style.display = Config.global.displayMetrics ? 'block' : 'none';
+    ms.domElement.style.display = Config.global.displayMetrics ? 'block' : 'none';
+    if (Config.global.displayMetrics) Interpol.pipeline.add('stats', update);
 
     $.emitter.on('global_config_change', function(key, value) {
         if (key === 'displayMetrics') {
             fps.domElement.style.display = value ? 'block' : 'none';
             ms.domElement.style.display = value ? 'block' : 'none';
+            Interpol.pipeline[value ? 'add' : 'remove']('stats', update);
         }
     });
 }

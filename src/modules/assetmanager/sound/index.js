@@ -7,7 +7,6 @@
 
 /* Import modules */
 var AudioContext = require('./context');
-var BufferLoader = require('../loader');
 
 var context = new AudioContext();
 

@@ -5,9 +5,6 @@
  *
  */
 
-/* Import modules */
-var BufferLoader = require('../loader');
-
 /*
  *  arrayBufferToBase64 [private] - Convert Array Buffer to Base64 encode.
  *  @param {arrayBuffer} - The files array buffer.

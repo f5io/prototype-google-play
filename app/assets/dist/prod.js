@@ -4,9 +4,10 @@
  * Google Ad Prototype 2014
  * @author: Joe Harlow
  *
+ * All code (except libs) (c) Copyright 2014 - Essence Digital. Please do not reproduce.
  */
 
-/* General Utilites */
+/* General Utilities */
 var $ = require('./modules/utilities'); // THIS IS NOT JQUERY
 
 /* Import our modules */
@@ -64,17 +65,19 @@ $.ready(function() {
         /* All assets are preloaded */
         var cubes = {},
             bigcube, bigrot,
-            cubeView = $('[role="cube"]')[0];
+            mainView = $('[role="main"]')[0],
+            cubeView = $('[role="cube"]')[0],
+            bgView = $('[role="background"]')[0];
 
         /* Initialise the Debug Panel */
         Debug.init();
 
         /* Create and initialise the Background Animation */
         var bg = Object.create(Background);
-        bg.init($('[role="background"]')[0]);
+        bg.init(bgView);
 
         /* Setup Accelerometer orientation listeners */
-        // Orient($('[role="main"]')[0]).listen();
+        // Orient(mainView).listen();
 
         /* If we are gamifying the ad, load 4 little cubes instead of one big one */
         if (Config.global.useGamification) {
@@ -160,7 +163,7 @@ $.ready(function() {
             /* 
              * If all visible faces have the same index and either all faces are
              * correctly oriented OR the cubes are normalised, set `bigrot` to the
-             * current rotation of the first cube and turn of `useGamification` in the config.
+             * current rotation of the first cube and turn off `useGamification` in the config.
              */
             if (sameRot && (sameFaceRot || isNormalised)) {
                 bigrot = $.clone(cbs[0].rotation);
@@ -174,10 +177,13 @@ $.ready(function() {
          *  and passes their configs into the Debug panel.
          */
         function initialiseFourCubes() {
+
             var configs = [];
             for (var i = 0; i < 4; i++) {
+                var cubeContainer = $.getElement('div', 'cube-container', {}, {});
+                cubeView.appendChild(cubeContainer);
                 var cube = Object.create(Cube);
-                cube.init(125, 125, i, 'cube0' + (i + 1), cubeView);
+                cube.init(125, 125, i, 'cube0' + (i + 1), cubeContainer);
                 cubes[cube.id] = cube;
                 cube.element.style.left = $.isOdd(i + 1) ? '-125px' : '125px';
                 cube.element.style.top = i < 2 ? '-125px' : '125px';
@@ -187,6 +193,7 @@ $.ready(function() {
                     cube.rotation.Z = $.getRandomRotation();
                     cube.render();
                 }
+                animateCubeIn(cubeContainer, i);
                 configs.push(cube);
             }
 
@@ -219,6 +226,31 @@ $.ready(function() {
         function clearCube() {
             cubeView.innerHTML = '';
             cubes = {};
+        }
+
+        /*
+         *  animateCubeIn [private] - Animate the cube in from outside of the screen.
+         *  @param {container} - A Cube containing HTML Element.
+         *  @param {index} - The index of the Cube for sequential animation.
+         */
+        function animateCubeIn(container, index) {
+
+            var from = -($.windowHeight() * 0.8),
+                to = 0;
+
+            container.style[$.CSS_TRANSFORM] += ' translateY(' + from + 'px)';
+
+            Interpol.tween()
+                .delay((4 - index) * 200)
+                .from(from)
+                .to(to)
+                .ease(Interpol.easing[index < 2 ? 'easeOutBounce' : 'easeOutBack'])
+                .step(function(val) {
+                    container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateY\(.+\)/g, function() {
+                        return 'translateY(' + val + 'px)';
+                    });
+                })
+                .start();
         }
 
         /* Let's prevent the horrible over scroll on mobile devices */
@@ -6261,9 +6293,6 @@ process.chdir = function (dir) {
  *
  */
 
-/* Import modules */
-var BufferLoader = require('../loader');
-
 /*
  *  arrayBufferToBase64 [private] - Convert Array Buffer to Base64 encode.
  *  @param {arrayBuffer} - The files array buffer.
@@ -6353,7 +6382,7 @@ var ImageAsset = function(src, res, next) {
 };
 
 module.exports = ImageAsset;
-},{"../loader":42}],41:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Asset Manager
@@ -6545,7 +6574,6 @@ module.exports = window.AudioContext || window.webAudioContext || window.webkitA
 
 /* Import modules */
 var AudioContext = require('./context');
-var BufferLoader = require('../loader');
 
 var context = new AudioContext();
 
@@ -6587,7 +6615,7 @@ function Sound(src, res, next) {
 module.exports = Sound;
 
 
-},{"../loader":42,"./context":43}],45:[function(require,module,exports){
+},{"./context":43}],45:[function(require,module,exports){
 var $ = require('../utilities');
 var Interpol = require('interpol');
 var Config = require('../config');
@@ -6720,7 +6748,7 @@ module.exports = Background;
  *
  */
 
-
+/* General Utilites */
 var $ = require('./utilities');
 
 var global = {};
@@ -6809,6 +6837,7 @@ module.exports = {
  *
  */
 
+/* General Utilites */
 var $ = require('../utilities');
 
 /* Define the common component functions which will be `super`ed by the component classes */
@@ -6831,7 +6860,9 @@ var Common = {
         this.rotation = {
             X: 0, Y: 0, Z: 0
         };
-        this.offset = 0;
+        this.translate = {
+            X: 0, Y: 0, Z: 0
+        };
         this.element = this.getElement();
         this.target.appendChild(this.element);
     },
@@ -6850,7 +6881,9 @@ var Common = {
         this.element.style[$.CSS_TRANSFORM] = 'rotateX(' + this.rotation.X + 'deg) ' +
             'rotateY(' + this.rotation.Y + 'deg) ' +
             'rotateZ(' + this.rotation.Z + 'deg) ' +
-            'translateZ(' + this.offset + 'px)';
+            'translateX(' + this.translate.X + 'px) ' +
+            'translateY(' + this.translate.Y + 'px) ' +
+            'translateZ(' + this.translate.Z + 'px)';
     },
     /*
      *  remove - Remove the components `element` from it's `target`.
@@ -6984,8 +7017,10 @@ module.exports = content;
  *
  */
 
-/* Import modules */
+/* General Utilities */
 var $ = require('../utilities');
+
+/* Import modules */
 var Common = require('./common');
 var content = require('./content');
 var Config = require('../config');
@@ -7011,7 +7046,7 @@ Face.init = function(width, height, index, name, target, parent) {
 	Common.init.apply(this, arguments);
 
 	this.element.setAttribute('parent', this.parentID);
-	this.offset = this.width / 2;
+	this.translate.Z = this.width / 2;
 	this.renderedZ = this.rotation.Z;
 };
 
@@ -7122,8 +7157,10 @@ module.exports = Face;
  *
  */
 
-/* Import modules */
+/* General Utilities */
 var $ = require('../utilities');
+
+/* Import modules */
 var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
@@ -7141,6 +7178,25 @@ var Cube = Object.create(Common);
  *  @return {HTMLElement} - A HTML Element.
  */
 Cube.getElement = function() {
+    // var styles = {
+    //     width: $.windowWidth() / 2 + 'px',
+    //     height: $.windowHeight() / 2 + 'px'
+    // };
+
+    // // var tx = ($.isOdd(this.index + 1) ? -(this.width * 1.3) : 0) + 'px';
+    // // var ty = (this.index < 2 ? -(this.height * 1.3) : 0) + 'px';
+
+    // // styles[$.CSS_TRANSFORM] = 'translate(' + tx + ',' + ty + ')';
+
+    // var mask = $.getElement('div', 'cube-mask', {}, styles);
+
+    // this.target.appendChild(mask);
+
+    // /* Translate the Cube on the z axis */
+    // this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
+
+    // this.target = mask;
+
     return $.getElement('div', 'cube', { index: this.index }, {
         width: this.width + 'px',
         height: this.height + 'px'
@@ -7244,17 +7300,23 @@ Cube.init = function(width, height, index, name, target, config) {
     var decouple;
 
     /* On document `touchstart` subscribe to an event fired when a `touchmove` moves over this cube */
-    document.addEventListener('touchstart', function() {
-        decouple = $.emitter.on(_self.id, function(e) {
-            decouple = decouple();
-            touchStart(e);
-        });
-    });
+    document.addEventListener('touchstart', addCubeChangeListener);
 
     /* On document `touchend` decouple the subscription */
     document.addEventListener('touchend', function() {
         if (decouple) decouple();
     });
+
+    /*
+     *  addCubeChangeListener [private] - Add a listener for when the cube has been touched
+     *  after another cube was interacted with.
+     */
+    function addCubeChangeListener() {
+        decouple = $.emitter.on(_self.id, function(e) {
+            if (decouple) decouple = decouple();
+            touchStart(e);
+        });
+    }
 
     /*
      *  touchStart [private] - Event handler for Cube `touchstart`.
@@ -7338,8 +7400,13 @@ Cube.init = function(width, height, index, name, target, config) {
         if (side) {
             var id = side.getAttribute('parent');
             if (id !== _self.id) {
-                $.emitter.emit(id, $.extend({}, e, { target: elem }));
-                touchEnd(e);
+                var onAnimComplete = function() {
+                    $.emitter.emit(id, $.extend({}, e, { target: elem }));
+                };
+
+                touchEnd($.extend({}, e, { onAnimComplete: onAnimComplete }));
+                // $.emitter.emit(id, $.extend({}, e, { target: elem }));
+                // touchEnd(e);
                 return;
             }
         } else if (!_self.config.useInertia) {
@@ -7411,7 +7478,10 @@ Cube.init = function(width, height, index, name, target, config) {
         document.removeEventListener('touchend', touchEnd);
 
         /* If the Cube is sequential or there has been no movement, immediately readd the event handler to the Cube */
-        if (!_self.config.isSequential || !hasMoved) _self.element.addEventListener('touchstart', touchStart);
+        if (!_self.config.isSequential || !hasMoved) {
+            _self.element.addEventListener('touchstart', touchStart);
+            addCubeChangeListener();
+        }
 
         /* If no movement exit out of this function early */
         if (!hasMoved) {
@@ -7469,12 +7539,14 @@ Cube.init = function(width, height, index, name, target, config) {
         var from = currentValue;
         var to = val;
 
+        var time = 'onAnimComplete' in e ? 100 : 300;
+
         /* Define the animation and start it immediately */
-        var oldV;
+        var oldV, dispatchedAnimComplete = false;
         endTween = Interpol.tween()
             .from(from)
             .to(to)
-            .duration(Math.round(300 * perc))
+            .duration(Math.round(time * perc))
             .ease(Interpol.easing.easeOutCirc)
             .step(function step(val) {
                 oldV = oldV || val;
@@ -7488,17 +7560,33 @@ Cube.init = function(width, height, index, name, target, config) {
                 _self.rotation[axis] = val;
                 _self.render();
                 oldV = val;
+
+                /*
+                 * Check if this touchEnd has been fired because we moved over a different
+                 * cube. If we are less than 10 degrees away from our target rotation, begin
+                 * interacting with the next cube.
+                 */
+                if ('onAnimComplete' in e) {
+                    var diff = Math.abs(to - val);
+                    if (diff <= 10 && !dispatchedAnimComplete) {
+                        dispatchedAnimComplete = true;
+                        e.onAnimComplete();
+                    }
+                }
             })
             .complete(function complete(val) {
                 _self.rotation[axis] = $.norm($.nearest(val, 90) % 360);
                 _self.render();
                 dispatchRotationComplete();
-                if (_self.config.isSequential) _self.element.addEventListener('touchstart', touchStart);
+                if (_self.config.isSequential) {
+                    _self.element.addEventListener('touchstart', touchStart);
+                    addCubeChangeListener();
+                }
                 /* Reset variables */
                 axis = undefined;
                 rDirection = undefined;
                 endTween = undefined;
-                /* Normalise Face rotation based on new rotation */
+                /* Normalise Face rotation based on new cube rotation */
                 normaliseFaces(_self.rotation);
             })
             .start();
@@ -8400,7 +8488,7 @@ var cubeUl;
 
 function init() {
 
-	//addMetrics();
+	addMetrics();
 
 	var target = $('[role="debug"]')[0];
 
@@ -8494,15 +8582,20 @@ function addMetrics() {
     target.appendChild(fps.domElement);
     target.appendChild(ms.domElement);
 
-    Interpol.pipeline.add('stats', function() {
+    function update() {
         fps.update();
         ms.update();
-    });
+    }
+
+    fps.domElement.style.display = Config.global.displayMetrics ? 'block' : 'none';
+    ms.domElement.style.display = Config.global.displayMetrics ? 'block' : 'none';
+    if (Config.global.displayMetrics) Interpol.pipeline.add('stats', update);
 
     $.emitter.on('global_config_change', function(key, value) {
         if (key === 'displayMetrics') {
             fps.domElement.style.display = value ? 'block' : 'none';
             ms.domElement.style.display = value ? 'block' : 'none';
+            Interpol.pipeline[value ? 'add' : 'remove']('stats', update);
         }
     });
 }

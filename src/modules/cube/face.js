@@ -5,8 +5,10 @@
  *
  */
 
-/* Import modules */
+/* General Utilities */
 var $ = require('../utilities');
+
+/* Import modules */
 var Common = require('./common');
 var content = require('./content');
 var Config = require('../config');
@@ -32,7 +34,7 @@ Face.init = function(width, height, index, name, target, parent) {
 	Common.init.apply(this, arguments);
 
 	this.element.setAttribute('parent', this.parentID);
-	this.offset = this.width / 2;
+	this.translate.Z = this.width / 2;
 	this.renderedZ = this.rotation.Z;
 };
 
