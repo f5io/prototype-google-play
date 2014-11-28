@@ -1,5 +1,5 @@
 var parentWindow,
-	parentOrigin;
+    parentOrigin;
 
 window.addEventListener('message', function(e) {
     console.log(e);
@@ -16,11 +16,11 @@ window.addEventListener('message', function(e) {
 });
 
 var Messaging = {
-	post: function(data) {
-		if (parentWindow && parentOrigin) {
-			parentWindow.postMessage(data, parentOrigin);
-		}
-	}
+    post: function(data) {
+        if (parentWindow && parentOrigin) {
+            parentWindow.postMessage(data, parentOrigin);
+        }
+    }
 };
 
 module.exports = Messaging;

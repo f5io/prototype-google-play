@@ -7,15 +7,16 @@ var cubeUl;
 
 function init() {
 
-	addMetrics();
+    addMetrics();
 
-	var target = $('[role="debug"]')[0];
+    var target = $('[role="debug"]')[0];
 
     var closeBtn = document.createElement('div');
     closeBtn.className = 'close';
     closeBtn.addEventListener('click', function() {
         target.classList.add('hidden');
         document.addEventListener('touchmove', $.prevent);
+        $.emitter.emit('debug_panel', false);
     });
 
     var openBtn = document.createElement('div');
@@ -24,6 +25,7 @@ function init() {
     openBtn.addEventListener('click', function() {
         target.classList.remove('hidden');
         document.removeEventListener('touchmove', $.prevent);
+        $.emitter.emit('debug_panel', true);
     });
 
     var main = document.createElement('div');
@@ -43,36 +45,36 @@ function init() {
     main.appendChild(cubeUl);
 
 
-	var gTitle = document.createElement('h1');
-	gTitle.innerText = 'Global Properties';
+    var gTitle = document.createElement('h1');
+    gTitle.innerText = 'Global Properties';
 
-	main.appendChild(gTitle);
+    main.appendChild(gTitle);
 
-	var ul = document.createElement('ul');
-	
-	Object.keys(Config.global).forEach(function(key) {
-		var li = document.createElement('li');
-		var input = document.createElement('input');
-		input.type = 'checkbox';
-		input.id = key;
+    var ul = document.createElement('ul');
+    
+    Object.keys(Config.global).forEach(function(key) {
+        var li = document.createElement('li');
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = key;
 
-		if (Config.global[key]) input.setAttribute('checked', true);
+        if (Config.global[key]) input.setAttribute('checked', true);
 
-		input.addEventListener('change', function(e) {
-			Config.global[key] = e.target.checked;
-		});
+        input.addEventListener('change', function(e) {
+            Config.global[key] = e.target.checked;
+        });
 
-		var label = document.createElement('label');
-		label.setAttribute('for', key);
-		label.innerHTML = '<h1>' + Config.titles[key] + '</h1><p>' + Config.descriptions[key] + '</p>';
+        var label = document.createElement('label');
+        label.setAttribute('for', key);
+        label.innerHTML = '<h1>' + Config.titles[key] + '</h1><p>' + Config.descriptions[key] + '</p>';
 
-		li.appendChild(input);
-		li.appendChild(label);
+        li.appendChild(input);
+        li.appendChild(label);
 
-		ul.appendChild(li);
-	});
+        ul.appendChild(li);
+    });
 
-	main.appendChild(ul);
+    main.appendChild(ul);
 
     $.emitter.on('global_config_change', function(key, value) {
         var input = $('input#' + key, main)[0];
@@ -87,7 +89,7 @@ function init() {
 function addMetrics() {
     var target = $('[role="metrics"]')[0];
 
-	var fps = new Stats();
+    var fps = new Stats();
     fps.domElement.style.position = 'absolute';
     fps.domElement.style.right = '0px';
     fps.domElement.style.bottom = '0px';
@@ -138,19 +140,26 @@ function defineCubeProperties(cubes) {
         if (configs[0][key]) input.setAttribute('checked', true);
 
         input.addEventListener('change', function(e) {
+            var isChecked = e.target.checked;
+            
             configs.forEach(function(config) {
-                if ((key === 'useVideo' || key === 'useGif') && e.target.checked)  {
+                if ((key === 'useVideo' || key === 'useGif') && isChecked)  {
                     config['useContent'] = true;
                     $('input#useContent', cubeUl)[0].checked = true;
                 }
 
-                if (key === 'useContent' && !e.target.checked) {
+                if (key === 'useContent' && !isChecked) {
                     config['useVideo'] = config['useGif'] = false;
                     $('input#useVideo', cubeUl)[0].checked = false;
                     $('input#useGif', cubeUl)[0].checked = false;
                 }
 
-                config[key] = e.target.checked;
+                if (key === 'isSequential' && isChecked) {
+                    config['useInertia'] = false;
+                    $('input#useInertia', cubeUl)[0].checked = false;
+                }
+
+                config[key] = isChecked;
             });
 
             switch (key) {
@@ -164,6 +173,12 @@ function defineCubeProperties(cubes) {
                         cube.rerenderFaces();
                         cube.getNormalisedFaceRotation(cube.rotation, true);
                     });
+
+                    if (key === 'normaliseFacialRotation' && !isChecked) {
+                        cubes.forEach(function(cube) {
+                            cube.resetNormalisedFaces();
+                        });
+                    }
                     break;
             }
         });

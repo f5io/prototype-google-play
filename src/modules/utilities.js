@@ -311,13 +311,25 @@ selector.windowHeight = (function() {
 })();
 
 /*
- *  selector.windowHeight - An IIFE to calculate the vendor specific string for CSS transforms.
+ *  selector.CSS_TRANSFORM - An IIFE to calculate the vendor specific string for CSS transforms.
  *
  *  @return {string} - The vendor specific string.
  */
 selector.CSS_TRANSFORM = (function() {
     var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
         return prefix === '' ? 'transform' : prefix + 'Transform';
+    });
+    return _getFirstSupported(arr);
+})();
+
+/*
+ *  selector.CSS_TRANSFORM_ORIGIN - An IIFE to calculate the vendor specific string for CSS transform origin.
+ *
+ *  @return {string} - The vendor specific string.
+ */
+selector.CSS_TRANSFORM_ORIGIN = (function() {
+    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
+        return prefix === '' ? 'transformOrigin' : prefix + 'TransformOrigin';
     });
     return _getFirstSupported(arr);
 })();
@@ -482,5 +494,73 @@ function rotateVector (v1, v2) {
         z: x1 * m2 + y1 * m6 + z1 * m10
     };
 }
+
+
+/*
+ *  Define some Custom Events which we can use anywhere in the project.
+ *  `tap`/`fastclick` - Removes the 300ms click delay for mobile.
+ *  `swipeleft`/`swiperight` - Detects a swipe on the X-axis.
+ *  `swipeup`/`swipedown` - Detects a swipe on the Y-axis.
+ */
+(function() {
+
+    if (!d.addEventListener) return;
+    
+    var createEvent = function(el, name) {
+        var e = d.createEvent('CustomEvent');
+        e.initCustomEvent(name, true, true, el.target);
+        if (!el.target.dispatchEvent(e)) e.preventDefault();
+        e = null;
+        return false;
+    };
+
+    var notMoved = true,
+        startPos = { x: 0, y: 0 },
+        endPos = { x: 0, y: 0},
+        prevTarget, prevTime,
+        evs = {
+            touchstart: function(e) {
+                startPos.x = e.touches[0].pageX;
+                startPos.y = e.touches[0].pageY;
+            },
+            touchmove: function(e) {
+                notMoved = false;
+                endPos.x = e.touches[0].pageX;
+                endPos.y = e.touches[0].pageY;
+            },
+            touchend: function(e) {
+                if (notMoved) {
+                    createEvent(e, 'fastclick');
+                    createEvent(e, 'tap');
+                    if (e.target === prevTarget) {
+                        var delta = Date.now() - prevTime;
+                        if (delta < 500) {
+                            createEvent(e, 'doubletap');
+                        }
+                    }
+                    prevTarget = e.target;
+                    prevTime = Date.now();
+                } else {
+                    var x = endPos.x - startPos.x,
+                        xr = Math.abs(x),
+                        y = endPos.y - startPos.y,
+                        yr = Math.abs(y);
+
+                    if (Math.max(xr, yr) > 20) {
+                        createEvent(e, xr > yr ? (x < 0 ? 'swipeleft' : 'swiperight') : (y < 0 ? 'swipeup' : 'swipedown'));
+                        notMoved = true;
+                    }
+                }
+            },
+            touchcancel: function(e) {
+                notMoved = false;
+            }
+        };
+
+    for (var e in evs) {
+        d.addEventListener(e, evs[e]);
+    }
+
+})();
 
 module.exports = selector;

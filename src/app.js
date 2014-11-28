@@ -25,9 +25,10 @@ var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Sli
 /* DOM Ready Event Handler */
 $.ready(function() {
 
+    /* Cache the views */
     var mainView = $('[role="main"]')[0],
         cubeView = $('[role="cube"]')[0],
-        loadView = $('[role="loader"')[0],
+        loadView = $('[role="loader"]')[0],
         bgView = $('[role="background"]')[0];
     
     /* Let's preload all the assets we are going to need */
@@ -74,6 +75,11 @@ $.ready(function() {
             
         /* Initialise the Debug Panel */
         Debug.init();
+
+        /* When the debug panel is open prevent pointer events on the main view */
+        $.emitter.on('debug_panel', function(isOpen) {
+            mainView.classList[isOpen ? 'add' : 'remove']('covered');
+        });
 
         /* Create and initialise the Background Animation */
         var bg = Object.create(Background);
@@ -174,6 +180,39 @@ $.ready(function() {
             }
 
         });
+    
+        /*
+         * Subscribe to the `fold_out_complete` event on the gamified 4 cubes. After a fold out
+         * has happened set `bigrot` to the rotation of the folded out cube and turn
+         * off `useGamification` in the config.
+         */
+        $.emitter.on('fold_out_complete', function(rot) {
+            bigrot = $.clone(rot);
+            Config.global.useGamification = false;
+        });
+
+        /*
+         * Subscribe to the `fold_out_start` event on the gamified 4 cubes. As a fold out happens,
+         * we animate the opacity of the shadows on the cube beneath.
+         */
+        $.emitter.on('fold_out_start', function(cubeIndex, duration) {
+            var cube = cubes[Object.keys(cubes).filter(function(key) {
+                return cubes[key].index === cubeIndex;
+            })[0]];
+
+            cube.faces.map(function(face) {
+                return $('.shadow', face.element)[0];
+            }).forEach(function(face) {
+                Interpol.tween()
+                    .from(0)
+                    .to(1)
+                    .duration(duration)
+                    .step(function(val) {
+                        face.style.opacity = val;
+                    })
+                    .start();
+            });
+        });
 
         /*
          *  initialiseFourCubes - Initialises the gamified ad with 4 cubes
@@ -195,6 +234,7 @@ $.ready(function() {
                     cube.rotation.Y = $.getRandomRotation([90, 270]);
                     cube.rotation.Z = $.getRandomRotation();
                     cube.render();
+                    if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
                 }
                 animateCubeIn(cubeContainer, i);
                 configs.push(cube);
@@ -208,8 +248,10 @@ $.ready(function() {
          *  its config into the Debug panel.
          */
         function initialiseBigCube() {
+            var cubeContainer = $.getElement('div', 'cube-container', {}, {});
+            cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
-            bigcube.init(250, 250, 0, 'main', cubeView, {
+            bigcube.init(250, 250, 0, 'main', cubeContainer, {
                 useInertia: true,
                 useBackgrounds: true,
                 useContent: false,

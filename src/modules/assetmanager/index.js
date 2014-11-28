@@ -13,9 +13,9 @@ var Promise = require('bluebird'); // https://github.com/petkaantonov/bluebird
 
 /* Define variables */
 var assets = [],
-	buffers = {},
-	imageRegex = /\.(gif|jpeg|jpg|png)$/,
-	soundRegex = /\.(mp3|ogg)$/;
+    buffers = {},
+    imageRegex = /\.(gif|jpeg|jpg|png)$/,
+    soundRegex = /\.(mp3|ogg)$/;
 
 var sounds, images;
 
@@ -28,23 +28,23 @@ var imageLoader, soundLoader;
  */
 function organiseAssets() {
 
-	sounds = assets.filter(function(asset) {
-		return soundRegex.test(asset);
-	});
+    sounds = assets.filter(function(asset) {
+        return soundRegex.test(asset);
+    });
 
-	images = assets.filter(function(asset) {
-		return imageRegex.test(asset);
-	});
+    images = assets.filter(function(asset) {
+        return imageRegex.test(asset);
+    });
 
-	sounds.forEach(function(sound) {
-		if (!(sound in buffers)) buffers[sound] = SoundAsset(sound);
-	});
+    sounds.forEach(function(sound) {
+        if (!(sound in buffers)) buffers[sound] = SoundAsset(sound);
+    });
 
-	images.forEach(function(image) {
-		if (!(image in buffers)) buffers[image] = ImageAsset(image);
-	});
+    images.forEach(function(image) {
+        if (!(image in buffers)) buffers[image] = ImageAsset(image);
+    });
 
-	return AssetManager;
+    return AssetManager;
 }
 
 var AssetManager = {};
@@ -56,12 +56,12 @@ var AssetManager = {};
  *  @return {AssetManager} - Return Asset Manager for chainability.
  */
 AssetManager.add = function(urls) {
-	if (typeof urls === 'string') {
-		assets.push(urls);
-	} else {
-		assets = assets.concat(urls);
-	}
-	return organiseAssets();
+    if (typeof urls === 'string') {
+        assets.push(urls);
+    } else {
+        assets = assets.concat(urls);
+    }
+    return organiseAssets();
 };
 
 /*
@@ -70,28 +70,28 @@ AssetManager.add = function(urls) {
  *  @return {Promise} - A promise that resolves when all assets are loaded.
  */
 AssetManager.preload = function() {
-	organiseAssets();
+    organiseAssets();
 
-	imageLoader = new BufferLoader(images, ImageAsset);
-	soundLoader = new BufferLoader(sounds, SoundAsset);
+    imageLoader = new BufferLoader(images, ImageAsset);
+    soundLoader = new BufferLoader(sounds, SoundAsset);
 
-	return Promise.all(
-		[
-			soundLoader.load(),
-			imageLoader.load()
-		]
-	).then(function(response) {
-		var snd = response[0],
-			img = response[1];
+    return Promise.all(
+        [
+            soundLoader.load(),
+            imageLoader.load()
+        ]
+    ).then(function(response) {
+        var snd = response[0],
+            img = response[1];
 
-		snd.forEach(function(obj) {
-			buffers[obj.source] = obj;
-		});
+        snd.forEach(function(obj) {
+            buffers[obj.source] = obj;
+        });
 
-		img.forEach(function(obj) {
-			buffers[obj.source] = obj;
-		});
-	});
+        img.forEach(function(obj) {
+            buffers[obj.source] = obj;
+        });
+    });
 
 };
 
@@ -101,8 +101,8 @@ AssetManager.preload = function() {
  *  @return {*} - Return the asset from the asset list or undefined.
  */
 AssetManager.get = function(url) {
-	organiseAssets();
-	if (url in buffers) return buffers[url];
+    organiseAssets();
+    if (url in buffers) return buffers[url];
 };
 
 module.exports = AssetManager;

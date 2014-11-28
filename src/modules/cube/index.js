@@ -12,6 +12,7 @@ var $ = require('../utilities');
 var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
+var Fold = require('./fold');
 var Config = require('../config');
 var Interpol = require('interpol');
 var AssetManager = require('../assetmanager');
@@ -26,25 +27,6 @@ var Cube = Object.create(Common);
  *  @return {HTMLElement} - A HTML Element.
  */
 Cube.getElement = function() {
-    // var styles = {
-    //     width: $.windowWidth() / 2 + 'px',
-    //     height: $.windowHeight() / 2 + 'px'
-    // };
-
-    // // var tx = ($.isOdd(this.index + 1) ? -(this.width * 1.3) : 0) + 'px';
-    // // var ty = (this.index < 2 ? -(this.height * 1.3) : 0) + 'px';
-
-    // // styles[$.CSS_TRANSFORM] = 'translate(' + tx + ',' + ty + ')';
-
-    // var mask = $.getElement('div', 'cube-mask', {}, styles);
-
-    // this.target.appendChild(mask);
-
-    // /* Translate the Cube on the z axis */
-    // this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
-
-    // this.target = mask;
-
     return $.getElement('div', 'cube', { index: this.index }, {
         width: this.width + 'px',
         height: this.height + 'px'
@@ -86,13 +68,22 @@ Cube.init = function(width, height, index, name, target, config) {
 
     /*
      *  renderFaces [private] - Render the faces of the Cube.
+     *  @param {useReset} - Boolean determining whether we should reset the cube back to 0,0,0.
      */
-    function renderFaces() {
+    function renderFaces(useReset) {
         /* Reset variables and remove existing faces */
         _self.nextFaceIndex = 0;
         _self.faces.forEach(function(face) {
             face.remove();
         });
+
+        var oldRot;
+
+        if (useReset) {
+            oldRot = $.clone(_self.rotation);
+            _self.rotation = { X: 0, Y: 0, Z: 0 };
+            _self.render();
+        }
 
         /* Populate the Cube's `faces` array with Faces */
         _self.faces = [];
@@ -120,6 +111,11 @@ Cube.init = function(width, height, index, name, target, config) {
                 elem: elem
             };
         });
+
+        if (useReset && oldRot) {
+            _self.rotation = oldRot;
+            _self.render();
+        }
     }
 
     /* Call `renderFaces` on `init` */
@@ -129,10 +125,17 @@ Cube.init = function(width, height, index, name, target, config) {
     this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
     this.element.addEventListener('touchstart', touchStart);
 
+    this.element.addEventListener('doubletap', function(e) {
+        var face = getFaceFromTarget(e.target);
+        var fold = Object.create(Fold);
+        fold.init(_self, face.index);
+    });
+
     /* Expose private functions as public on the Cube */
     this.getFaceFromTarget = getFaceFromTarget;
     this.getNormalisedFaceRotation = normaliseFaces;
-    this.rerenderFaces = renderFaces;
+    this.rerenderFaces = renderFaces.bind(this, true);
+    this.resetNormalisedFaces = resetNormalisedFaces;
 
     /* Private variables */
     var startX, startY, startT,
@@ -143,7 +146,7 @@ Cube.init = function(width, height, index, name, target, config) {
         current, change,
         hasMoved, changedDirection,
         endTween, oTween, interactedSide,
-        moveStartT, moveStartX, moveStartY;
+        moveStartT, moveStartX, moveStartY, lastMoveT;
 
     var decouple;
 
@@ -154,6 +157,16 @@ Cube.init = function(width, height, index, name, target, config) {
     document.addEventListener('touchend', function() {
         if (decouple) decouple();
     });
+
+    /*
+     *  resetNormalisedFaces [private] - Reset all faces Z-rotation back to 0.
+     */
+    function resetNormalisedFaces() {
+        _self.faces.forEach(function(face) {
+            face.rotation.Z = 0;
+            face.render();
+        });
+    }
 
     /*
      *  addCubeChangeListener [private] - Add a listener for when the cube has been touched
@@ -289,6 +302,8 @@ Cube.init = function(width, height, index, name, target, config) {
             moveStartY = currentY;
         }
 
+        lastMoveT = Date.now();
+
         /* We are sure we have moved by this point */
         hasMoved = true;
 
@@ -355,6 +370,8 @@ Cube.init = function(width, height, index, name, target, config) {
         var diffDistance = direction === 'leftright' ? moveDistX : moveDistY;
         var diffTime = moveEndT - moveStartT;
 
+        var diffTimeSinceLastMove = moveEndT - lastMoveT;
+
         /* Transform the distance moved based on direction of movement */
         diffDistance = diffDistance < 0 && (rDirection === 'right' || rDirection === 'down') ? Math.abs(diffDistance) : diffDistance;
         diffDistance = diffDistance > 0 && (rDirection === 'left' || rDirection === 'up') ? -diffDistance : diffDistance;
@@ -373,15 +390,16 @@ Cube.init = function(width, height, index, name, target, config) {
          * If using inertia determine the new value to animate to, otherwise determine
          * one rotation in the right direction from the `startValue`.
          */
-        if (_self.config.useInertia) {
-            val = val - determineCalculation(Math[velocity < 0 ? 'min' : 'max'](velocity < 0 ? -(velMin) : velMin, Math.round(velocity * 2)) * 90);
+        if (_self.config.useInertia && Math.abs(velocity) > 0.8) {
+            var mathOp = velocity < 0 ? 'min' : 'max';
+            var val1 = velocity < 0 ? -velMin : velMin;
+            var val2 = Math.round(velocity * 2);
+
+            val = val - determineCalculation(Math[mathOp](val1, val2) * 90);
             perc = Math.abs(val - currentValue) / 90;
         } else {
-            if (direction === 'updown') {
-                val = (dirY === 'up') ? startValue + determineCalculation(90) : startValue - determineCalculation(90);
-            } else {
-                val = (dirX === 'left') ? startValue + determineCalculation(90) : startValue - determineCalculation(90);
-            }
+            var sV = $.nearest(startValue, 90);
+            val = (rDirection === 'up' || rDirection === 'left') ? sV + determineCalculation(90) : sV - determineCalculation(90);
         }
 
         var from = currentValue;
@@ -585,7 +603,7 @@ Cube.render = function() {
     while (++faceNum < faceCount) {
         face = this.faceData[this.nextFaceIndex];
         direction = Vect3.normalize(Vect3.sub(lightPosition, face.center));
-        amount = 1 - Math.max(0, Vect3.dot(face.normal, direction)).toFixed(2);
+        amount = 1 - Math.max(0, Vect3.dot(face.normal, direction)).toFixed(3);
         if (face.light != amount) {
             face.light = amount;
             face.elem.style.opacity = amount;

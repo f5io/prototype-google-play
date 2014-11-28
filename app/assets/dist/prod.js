@@ -26,9 +26,10 @@ var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Sli
 /* DOM Ready Event Handler */
 $.ready(function() {
 
+    /* Cache the views */
     var mainView = $('[role="main"]')[0],
         cubeView = $('[role="cube"]')[0],
-        loadView = $('[role="loader"')[0],
+        loadView = $('[role="loader"]')[0],
         bgView = $('[role="background"]')[0];
     
     /* Let's preload all the assets we are going to need */
@@ -75,6 +76,11 @@ $.ready(function() {
             
         /* Initialise the Debug Panel */
         Debug.init();
+
+        /* When the debug panel is open prevent pointer events on the main view */
+        $.emitter.on('debug_panel', function(isOpen) {
+            mainView.classList[isOpen ? 'add' : 'remove']('covered');
+        });
 
         /* Create and initialise the Background Animation */
         var bg = Object.create(Background);
@@ -175,6 +181,39 @@ $.ready(function() {
             }
 
         });
+    
+        /*
+         * Subscribe to the `fold_out_complete` event on the gamified 4 cubes. After a fold out
+         * has happened set `bigrot` to the rotation of the folded out cube and turn
+         * off `useGamification` in the config.
+         */
+        $.emitter.on('fold_out_complete', function(rot) {
+            bigrot = $.clone(rot);
+            Config.global.useGamification = false;
+        });
+
+        /*
+         * Subscribe to the `fold_out_start` event on the gamified 4 cubes. As a fold out happens,
+         * we animate the opacity of the shadows on the cube beneath.
+         */
+        $.emitter.on('fold_out_start', function(cubeIndex, duration) {
+            var cube = cubes[Object.keys(cubes).filter(function(key) {
+                return cubes[key].index === cubeIndex;
+            })[0]];
+
+            cube.faces.map(function(face) {
+                return $('.shadow', face.element)[0];
+            }).forEach(function(face) {
+                Interpol.tween()
+                    .from(0)
+                    .to(1)
+                    .duration(duration)
+                    .step(function(val) {
+                        face.style.opacity = val;
+                    })
+                    .start();
+            });
+        });
 
         /*
          *  initialiseFourCubes - Initialises the gamified ad with 4 cubes
@@ -196,6 +235,7 @@ $.ready(function() {
                     cube.rotation.Y = $.getRandomRotation([90, 270]);
                     cube.rotation.Z = $.getRandomRotation();
                     cube.render();
+                    if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
                 }
                 animateCubeIn(cubeContainer, i);
                 configs.push(cube);
@@ -209,8 +249,10 @@ $.ready(function() {
          *  its config into the Debug panel.
          */
         function initialiseBigCube() {
+            var cubeContainer = $.getElement('div', 'cube-container', {}, {});
+            cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
-            bigcube.init(250, 250, 0, 'main', cubeView, {
+            bigcube.init(250, 250, 0, 'main', cubeContainer, {
                 useInertia: true,
                 useBackgrounds: true,
                 useContent: false,
@@ -263,7 +305,7 @@ $.ready(function() {
     });
 
 });
-},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":50,"./modules/debug":53,"./modules/messaging":54,"./modules/orient":55,"./modules/utilities":56,"interpol":2,"stats":3}],2:[function(require,module,exports){
+},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":51,"./modules/debug":54,"./modules/messaging":55,"./modules/orient":56,"./modules/utilities":57,"interpol":2,"stats":3}],2:[function(require,module,exports){
 (function (global){
 ;__browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 (function(factory) {
@@ -276,451 +318,453 @@ $.ready(function() {
 
 })(function(w) {
 
-	'use strict';
+    'use strict';
 
-	var _ = {};
+    var _ = {};
 
-	_.fps = 60;
+    _.fps = 60;
 
-	/*
-	 *
-	 *	TERMS OF USE - EASING EQUATIONS
-	 * 
-	 *	Open source under the BSD License. 
-	 *
-	 *	Copyright © 2001 Robert Penner
-	 *	All rights reserved.
-	 *
-	 *	Redistribution and use in source and binary forms, with or without modification, 
-	 *	are permitted provided that the following conditions are met:
-	 *
-	 *	Redistributions of source code must retain the above copyright notice, this list of 
-	 *	conditions and the following disclaimer.
-	 *	Redistributions in binary form must reproduce the above copyright notice, this list 
-	 *	of conditions and the following disclaimer in the documentation and/or other materials 
-	 *	provided with the distribution.
-	 *
-	 *	Neither the name of the author nor the names of contributors may be used to endorse 
-	 *	or promote products derived from this software without specific prior written permission.
-	 *
-	 *	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
-	 *	EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-	 *	MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-	 *	COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-	 *	EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-	 *	GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
-	 *	AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-	 *	NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
-	 *	OF THE POSSIBILITY OF SUCH DAMAGE. 
-	 *
-	 */
+    /*
+     *
+     *  TERMS OF USE - EASING EQUATIONS
+     * 
+     *  Open source under the BSD License. 
+     *
+     *  Copyright © 2001 Robert Penner
+     *  All rights reserved.
+     *
+     *  Redistribution and use in source and binary forms, with or without modification, 
+     *  are permitted provided that the following conditions are met:
+     *
+     *  Redistributions of source code must retain the above copyright notice, this list of 
+     *  conditions and the following disclaimer.
+     *  Redistributions in binary form must reproduce the above copyright notice, this list 
+     *  of conditions and the following disclaimer in the documentation and/or other materials 
+     *  provided with the distribution.
+     *
+     *  Neither the name of the author nor the names of contributors may be used to endorse 
+     *  or promote products derived from this software without specific prior written permission.
+     *
+     *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY 
+     *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+     *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+     *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+     *  EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+     *  GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
+     *  AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+     *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
+     *  OF THE POSSIBILITY OF SUCH DAMAGE. 
+     *
+     */
 
-	_.easing = {
-		easeNone: function(t, b, c, d) {
-			return c * t / d + b;
-		},
-		easeInQuad: function(t, b, c, d) {
-			return c*(t/=d)*t + b;
-		},
-		easeOutQuad: function(t, b, c, d) {
-			return -c *(t/=d)*(t-2) + b;
-		},
-		easeInOutQuad: function(t, b, c, d) {
-			if ((t/=d/2) < 1) return c/2*t*t + b;
-			return -c/2 * ((--t)*(t-2) - 1) + b;
-		},
-		easeInCubic: function(t, b, c, d) {
-			return c*(t/=d)*t*t + b;
-		},
-		easeOutCubic: function(t, b, c, d) {
-			return c*((t=t/d-1)*t*t + 1) + b;
-		},
-		easeInOutCubic: function(t, b, c, d) {
-			if ((t/=d/2) < 1) return c/2*t*t*t + b;
-			return c/2*((t-=2)*t*t + 2) + b;
-		},
-		easeInQuart: function(t, b, c, d) {
-			return c*(t/=d)*t*t*t + b;
-		},
-		easeOutQuart: function(t, b, c, d) {
-			return -c * ((t=t/d-1)*t*t*t - 1) + b;
-		},
-		easeInOutQuart: function(t, b, c, d) {
-			if ((t/=d/2) < 1) return c/2*t*t*t*t + b;
-			return -c/2 * ((t-=2)*t*t*t - 2) + b;
-		},
-		easeInQuint: function(t, b, c, d) {
-			return c*(t/=d)*t*t*t*t + b;
-		},
-		easeOutQuint: function(t, b, c, d) {
-			return c*((t=t/d-1)*t*t*t*t + 1) + b;
-		},
-		easeInOutQuint: function(t, b, c, d) {
-			if ((t/=d/2) < 1) return c/2*t*t*t*t*t + b;
-			return c/2*((t-=2)*t*t*t*t + 2) + b;
-		},
-		easeInSine: function(t, b, c, d) {
-			return -c * Math.cos(t/d * (Math.PI/2)) + c + b;
-		},
-		easeOutSine: function(t, b, c, d) {
-			return c * Math.sin(t/d * (Math.PI/2)) + b;
-		},
-		easeInOutSine: function(t, b, c, d) {
-			return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
-		},
-		easeInExpo: function(t, b, c, d) {
-			return (t==0) ? b : c * Math.pow(2, 10 * (t/d - 1)) + b;
-		},
-		easeOutExpo: function(t, b, c, d) {
-			return (t==d) ? b+c : c * (-Math.pow(2, -10 * t/d) + 1) + b;
-		},
-		easeInOutExpo: function(t, b, c, d) {
-			if (t==0) return b;
-			if (t==d) return b+c;
-			if ((t/=d/2) < 1) return c/2 * Math.pow(2, 10 * (t - 1)) + b;
-			return c/2 * (-Math.pow(2, -10 * --t) + 2) + b;
-		},
-		easeInCirc: function(t, b, c, d) {
-			return -c * (Math.sqrt(1 - (t/=d)*t) - 1) + b;
-		},
-		easeOutCirc: function(t, b, c, d) {
-			return c * Math.sqrt(1 - (t=t/d-1)*t) + b;
-		},
-		easeInOutCirc: function(t, b, c, d) {
-			if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
-			return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
-		},
-		easeInElastic: function(t, b, c, d) {
-			var s=1.70158;var p=0;var a=c;
-			if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
-			if (a < Math.abs(c)) { a=c; var s=p/4; }
-			else var s = p/(2*Math.PI) * Math.asin (c/a);
-			return -(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )) + b;
-		},
-		easeOutElastic: function(t, b, c, d) {
-			var s=1.70158;var p=0;var a=c;
-			if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
-			if (a < Math.abs(c)) { a=c; var s=p/4; }
-			else var s = p/(2*Math.PI) * Math.asin (c/a);
-			return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c + b;
-		},
-		easeInOutElastic: function(t, b, c, d) {
-			var s=1.70158;var p=0;var a=c;
-			if (t==0) return b;  if ((t/=d/2)==2) return b+c;  if (!p) p=d*(.3*1.5);
-			if (a < Math.abs(c)) { a=c; var s=p/4; }
-			else var s = p/(2*Math.PI) * Math.asin (c/a);
-			if (t < 1) return -.5*(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )) + b;
-			return a*Math.pow(2,-10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )*.5 + c + b;
-		},
-		easeInBack: function(t, b, c, d, s) {
-			if (s == undefined) s = 1.70158;
-			return c*(t/=d)*t*((s+1)*t - s) + b;
-		},
-		easeOutBack: function(t, b, c, d, s) {
-			if (s == undefined) s = 1.70158;
-			return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
-		},
-		easeInOutBack: function(t, b, c, d, s) {
-			if (s == undefined) s = 1.70158; 
-			if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
-			return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
-		},
-		easeInBounce: function(t, b, c, d) {
-			return c - this.easeOutBounce (d-t, 0, c, d) + b;
-		},
-		easeOutBounce: function(t, b, c, d) {
-			if ((t/=d) < (1/2.75)) {
-				return c*(7.5625*t*t) + b;
-			} else if (t < (2/2.75)) {
-				return c*(7.5625*(t-=(1.5/2.75))*t + .75) + b;
-			} else if (t < (2.5/2.75)) {
-				return c*(7.5625*(t-=(2.25/2.75))*t + .9375) + b;
-			} else {
-				return c*(7.5625*(t-=(2.625/2.75))*t + .984375) + b;
-			}
-		},
-		easeInOutBounce: function (t, b, c, d) {
-			if (t < d/2) return this.easeInBounce (t*2, 0, c, d) * .5 + b;
-			return this.easeOutBounce (t*2-d, 0, c, d) * .5 + c*.5 + b;
-		}
-	};
+    _.easing = {
+        easeNone: function(t, b, c, d) {
+            return c * t / d + b;
+        },
+        easeInQuad: function(t, b, c, d) {
+            return c*(t/=d)*t + b;
+        },
+        easeOutQuad: function(t, b, c, d) {
+            return -c *(t/=d)*(t-2) + b;
+        },
+        easeInOutQuad: function(t, b, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t + b;
+            return -c/2 * ((--t)*(t-2) - 1) + b;
+        },
+        easeInCubic: function(t, b, c, d) {
+            return c*(t/=d)*t*t + b;
+        },
+        easeOutCubic: function(t, b, c, d) {
+            return c*((t=t/d-1)*t*t + 1) + b;
+        },
+        easeInOutCubic: function(t, b, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t*t + b;
+            return c/2*((t-=2)*t*t + 2) + b;
+        },
+        easeInQuart: function(t, b, c, d) {
+            return c*(t/=d)*t*t*t + b;
+        },
+        easeOutQuart: function(t, b, c, d) {
+            return -c * ((t=t/d-1)*t*t*t - 1) + b;
+        },
+        easeInOutQuart: function(t, b, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t*t*t + b;
+            return -c/2 * ((t-=2)*t*t*t - 2) + b;
+        },
+        easeInQuint: function(t, b, c, d) {
+            return c*(t/=d)*t*t*t*t + b;
+        },
+        easeOutQuint: function(t, b, c, d) {
+            return c*((t=t/d-1)*t*t*t*t + 1) + b;
+        },
+        easeInOutQuint: function(t, b, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t*t*t*t + b;
+            return c/2*((t-=2)*t*t*t*t + 2) + b;
+        },
+        easeInSine: function(t, b, c, d) {
+            return -c * Math.cos(t/d * (Math.PI/2)) + c + b;
+        },
+        easeOutSine: function(t, b, c, d) {
+            return c * Math.sin(t/d * (Math.PI/2)) + b;
+        },
+        easeInOutSine: function(t, b, c, d) {
+            return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
+        },
+        easeInExpo: function(t, b, c, d) {
+            return (t==0) ? b : c * Math.pow(2, 10 * (t/d - 1)) + b;
+        },
+        easeOutExpo: function(t, b, c, d) {
+            return (t==d) ? b+c : c * (-Math.pow(2, -10 * t/d) + 1) + b;
+        },
+        easeInOutExpo: function(t, b, c, d) {
+            if (t==0) return b;
+            if (t==d) return b+c;
+            if ((t/=d/2) < 1) return c/2 * Math.pow(2, 10 * (t - 1)) + b;
+            return c/2 * (-Math.pow(2, -10 * --t) + 2) + b;
+        },
+        easeInCirc: function(t, b, c, d) {
+            return -c * (Math.sqrt(1 - (t/=d)*t) - 1) + b;
+        },
+        easeOutCirc: function(t, b, c, d) {
+            return c * Math.sqrt(1 - (t=t/d-1)*t) + b;
+        },
+        easeInOutCirc: function(t, b, c, d) {
+            if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
+            return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1) + b;
+        },
+        easeInElastic: function(t, b, c, d) {
+            var s=1.70158;var p=0;var a=c;
+            if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
+            if (a < Math.abs(c)) { a=c; var s=p/4; }
+            else var s = p/(2*Math.PI) * Math.asin (c/a);
+            return -(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )) + b;
+        },
+        easeOutElastic: function(t, b, c, d) {
+            var s=1.70158;var p=0;var a=c;
+            if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
+            if (a < Math.abs(c)) { a=c; var s=p/4; }
+            else var s = p/(2*Math.PI) * Math.asin (c/a);
+            return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c + b;
+        },
+        easeInOutElastic: function(t, b, c, d) {
+            var s=1.70158;var p=0;var a=c;
+            if (t==0) return b;  if ((t/=d/2)==2) return b+c;  if (!p) p=d*(.3*1.5);
+            if (a < Math.abs(c)) { a=c; var s=p/4; }
+            else var s = p/(2*Math.PI) * Math.asin (c/a);
+            if (t < 1) return -.5*(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )) + b;
+            return a*Math.pow(2,-10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )*.5 + c + b;
+        },
+        easeInBack: function(t, b, c, d, s) {
+            if (s == undefined) s = 1.70158;
+            return c*(t/=d)*t*((s+1)*t - s) + b;
+        },
+        easeOutBack: function(t, b, c, d, s) {
+            if (s == undefined) s = 1.70158;
+            return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
+        },
+        easeInOutBack: function(t, b, c, d, s) {
+            if (s == undefined) s = 1.70158; 
+            if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
+            return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
+        },
+        easeInBounce: function(t, b, c, d) {
+            return c - this.easeOutBounce (d-t, 0, c, d) + b;
+        },
+        easeOutBounce: function(t, b, c, d) {
+            if ((t/=d) < (1/2.75)) {
+                return c*(7.5625*t*t) + b;
+            } else if (t < (2/2.75)) {
+                return c*(7.5625*(t-=(1.5/2.75))*t + .75) + b;
+            } else if (t < (2.5/2.75)) {
+                return c*(7.5625*(t-=(2.25/2.75))*t + .9375) + b;
+            } else {
+                return c*(7.5625*(t-=(2.625/2.75))*t + .984375) + b;
+            }
+        },
+        easeInOutBounce: function (t, b, c, d) {
+            if (t < d/2) return this.easeInBounce (t*2, 0, c, d) * .5 + b;
+            return this.easeOutBounce (t*2-d, 0, c, d) * .5 + c*.5 + b;
+        }
+    };
 
-	_.rafLast = 0;
+    _.rafLast = 0;
 
-	_.requestAnimFrame = (function(){
-		return	w.requestAnimationFrame			||
-				w.webkitRequestAnimationFrame	||
-				w.mozRequestAnimationFrame		||
-				function(callback, element) {
-					var currTime = new Date().getTime();
-					var timeToCall = Math.max(0, 16 - (currTime - _.rafLast));
-					var id = window.setTimeout(function() { callback(currTime + timeToCall); }, timeToCall);
-					_.rafLast = currTime + timeToCall;
-					return id;
-				};
-	})();
+    _.requestAnimFrame = (function(){
+        return  w.requestAnimationFrame         ||
+                w.webkitRequestAnimationFrame   ||
+                w.mozRequestAnimationFrame      ||
+                function(callback, element) {
+                    var currTime = new Date().getTime();
+                    var timeToCall = Math.max(0, 16 - (currTime - _.rafLast));
+                    var id = window.setTimeout(function() { callback(currTime + timeToCall); }, timeToCall);
+                    _.rafLast = currTime + timeToCall;
+                    return id;
+                };
+    })();
 
-	_.cancelAnimFrame = (function() {
-		return	w.cancelAnimationFrame				||
-				w.cancelRequestAnimationFrame		||
-				w.webkitCancelAnimationFrame		||
-				w.webkitCancelRequestAnimationFrame	||
-				w.mozCancelAnimationFrame			||
-				w.mozCancelRequestAnimationFrame	||
-				function(id) {
-					clearTimeout(id);
-				};
-	})();
+    _.cancelAnimFrame = (function() {
+        return  w.cancelAnimationFrame              ||
+                w.cancelRequestAnimationFrame       ||
+                w.webkitCancelAnimationFrame        ||
+                w.webkitCancelRequestAnimationFrame ||
+                w.mozCancelAnimationFrame           ||
+                w.mozCancelRequestAnimationFrame    ||
+                function(id) {
+                    clearTimeout(id);
+                };
+    })();
 
-	_.noop = function() {};
-	_.tick = function() {
-		var _t = this;
-		return function() {
-			_t.raf = _.requestAnimFrame.call(w, _.tick.call(_t));
-			_t.now = new Date().getTime();
-			_t.delta = _t.now - _t.then;
-			if (_t.delta > _t.interval) {
-				var keys = Object.keys(_t.pipeline);
-				var len = keys.length;
-				var i = 0;
-				for (; i < len; i++) {
-					_t.pipeline[keys[i]]();
-				}
+    _.noop = function() {};
+    _.tick = function() {
+        var _t = this;
+        return function() {
+            _t.raf = _.requestAnimFrame.call(w, _.tick.call(_t));
+            _t.now = new Date().getTime();
+            _t.delta = _t.now - _t.then;
+            if (_t.delta > _t.interval) {
+                var keys = Object.keys(_t.pipeline);
+                var len = keys.length;
+                var i = 0;
+                for (; i < len; i++) {
+                    _t.pipeline[keys[i]]();
+                }
 
-				// for (var n in _t.pipeline) {
-				// 	_t.pipeline[n]();
-				// }
-				_t.then = _t.now - (_t.delta % _t.interval);
-			}
-		}
-	}
+                // for (var n in _t.pipeline) {
+                //  _t.pipeline[n]();
+                // }
+                _t.then = _t.now - (_t.delta % _t.interval);
+            }
+        }
+    }
 
-	_.FramePipeline = function() {
-		var _t = this;
-		_t.pipeline = {};
-		_t.then = new Date().getTime();
-		_t.now = undefined;
-		_t.raf = undefined;
-		_t.delta = undefined;
-		_t.interval = 1000 / _.fps;
-	};
+    _.FramePipeline = function() {
+        var _t = this;
+        _t.pipeline = {};
+        _t.then = new Date().getTime();
+        _t.now = undefined;
+        _t.raf = undefined;
+        _t.delta = undefined;
+        _t.interval = 1000 / _.fps;
+    };
 
-	_.FramePipeline.prototype = {
-		add : function(name, fn) {
-			this.pipeline[name] = fn;
-		},
-		remove : function(name) {
-			delete this.pipeline[name];
-		},
-		start : function() {
-			_.tick.call(this)();
-		},
-		has : function(name) {
-			return name in this.pipeline;
-		},
-		pause : function() {
-			_.cancelAnimFrame.call(w, this.raf);
-		},
-		setFPS : function(fps) {
-			this.interval = 1000 / fps;
-		}
-	};
+    _.FramePipeline.prototype = {
+        add : function(name, fn) {
+            this.pipeline[name] = fn;
+        },
+        remove : function(name) {
+            delete this.pipeline[name];
+        },
+        start : function() {
+            _.tick.call(this)();
+        },
+        has : function(name) {
+            return name in this.pipeline;
+        },
+        pause : function() {
+            _.cancelAnimFrame.call(w, this.raf);
+        },
+        setFPS : function(fps) {
+            this.interval = 1000 / fps;
+        }
+    };
 
-	_.pipeline = new _.FramePipeline();
-	_.pipeline.start();
+    _.pipeline = new _.FramePipeline();
+    _.pipeline.start();
 
 
-	_.TweenController = function() {
-		this.q = [];
-	};
+    _.TweenController = function() {
+        this.q = [];
+    };
 
-	_.TweenController.prototype = {
-		queue : function() {
-			var nt = new _.Tween(this);
-			var pt = this.q[this.q.length - 1];
-			if (!pt || pt && pt.hasCompleted) {
-				nt.canStart = true;
-			} else {
-				nt.canStart = false;
-				pt.then(function() {
-					nt.canStart = true;
-					nt.start();
-				});
-			}
-			this.q.push(nt);
-			return nt;
-		}
-	}
+    _.TweenController.prototype = {
+        queue : function() {
+            var nt = new _.Tween(this);
+            var pt = this.q[this.q.length - 1];
+            if (!pt || pt && pt.hasCompleted) {
+                nt.canStart = true;
+            } else {
+                nt.canStart = false;
+                pt.then(function() {
+                    nt.canStart = true;
+                    nt.start();
+                });
+            }
+            this.q.push(nt);
+            return nt;
+        }
+    }
 
-	_.Tween = function(ctlr) {
-		var _t = this;
-		_t.name = '$interpol-' + parseInt(Math.random() * new Date().getTime());
-		_t.controller = ctlr || new _.TweenController();
-		_t.startVal = 0;
-		_t.endVal = 0;
-		_t.differences = {};
-		_t.canStart = true;
-		_t.hasStarted = false;
-		_t.hasCompleted = false;
-		_t.tweenDuration = 400;
-		_t.delayDuration = 0;
-		_t.isDelayed = false;
-		_t.repeatCount = 0;
-		_t.paused = false;
-		_t.easing = _.easing.easeNone;
-		_t.onStep = _.noop;
-		_t.onComplete = _.noop;
-		_t.onStopped = _.noop
-		_t.andThen = _.noop;
-	};
+    _.Tween = function(ctlr) {
+        var _t = this;
+        _t.name = '$interpol-' + parseInt(Math.random() * new Date().getTime());
+        _t.controller = ctlr || new _.TweenController();
+        _t.startVal = 0;
+        _t.endVal = 0;
+        _t.differences = {};
+        _t.canStart = true;
+        _t.hasStarted = false;
+        _t.hasCompleted = false;
+        _t.tweenDuration = 400;
+        _t.delayDuration = 0;
+        _t.isDelayed = false;
+        _t.repeatCount = 0;
+        _t.paused = false;
+        _t.easing = _.easing.easeNone;
+        _t.onStep = _.noop;
+        _t.onComplete = _.noop;
+        _t.onStopped = _.noop
+        _t.andThen = _.noop;
+    };
 
-	_.Tween.prototype = {
-		from : function(val) {
-			this.startVal = val;
-			return this;
-		},
-		to : function(val) {
-			this.endVal = val;
-			return this;
-		},
-		duration : function(ms) {
-			this.tweenDuration = ms;
-			return this;
-		},
-		delay : function(ms) {
-			this.delayDuration = ms;
-			return this;
-		},
-		repeat : function(count) {
-			this.repeatCount = count;
-			return this;
-		},
-		ease : function(fn) {
-			this.easing = fn;
-			return this;
-		},
-		step : function(fn) {
-			this.onStep = fn;
-			return this;
-		},
-		complete : function(fn) {
-			this.onComplete = fn;
-			return this;
-		},
-		stopped : function(fn) {
-			this.onStopped = fn;
-			return this;
-		},
-		then : function(fn) {
-			this.andThen = fn;
-			return this;
-		},
-		reverse : function() {
-			var sV = this.startVal,
-				eV = this.endVal;
+    _.Tween.prototype = {
+        from : function(val) {
+            this.startVal = val;
+            return this;
+        },
+        to : function(val) {
+            this.endVal = val;
+            return this;
+        },
+        duration : function(ms) {
+            this.tweenDuration = ms;
+            return this;
+        },
+        delay : function(ms) {
+            this.delayDuration = ms;
+            return this;
+        },
+        repeat : function(count) {
+            this.repeatCount = count;
+            return this;
+        },
+        ease : function(fn) {
+            this.easing = fn;
+            return this;
+        },
+        step : function(fn) {
+            this.onStep = fn;
+            return this;
+        },
+        complete : function(fn) {
+            this.onComplete = fn;
+            return this;
+        },
+        stopped : function(fn) {
+            this.onStopped = fn;
+            return this;
+        },
+        then : function(fn) {
+            this.andThen = fn;
+            return this;
+        },
+        reverse : function() {
+            var sV = this.startVal,
+                eV = this.endVal;
 
-			this.startVal = eV;
-			this.endVal = sV;
-			this.start();
-		},
-		start : function() {
-			var _t = this;
-			if (!_t.canStart) return _t;
-			if (_t.delayDuration > 0 && !_t.isDelayed) {
-				setTimeout(function() {
-					_t.start();
-				}, _t.delayDuration);
-				_t.isDelayed = true;
-				return _t;
-			}
+            this.startVal = eV;
+            this.endVal = sV;
+            this.start();
+        },
+        start : function(fn) {
+            var _t = this;
+            if (!_t.canStart) return _t;
+            if (_t.delayDuration > 0 && !_t.isDelayed) {
+                setTimeout(function() {
+                    _t.start(fn);
+                }, _t.delayDuration);
+                _t.isDelayed = true;
+                return _t;
+            }
 
-			var	stepDuration = 1000 / _.fps,
-				steps = _t.tweenDuration / stepDuration;
+            if (fn) fn.apply(_t);
 
-			if (typeof _t.endVal === 'object') {
-				if (typeof _t.startVal !== 'object') {
-					_t.startVal = {};
-				}
-				for (var val in _t.endVal) {
-					if (!_t.startVal.hasOwnProperty(val)) {
-						_t.startVal[val] = 0;
-					}
-					_t.differences[val] = _t.endVal[val] - _t.startVal[val];
-				}
-			} else {
-				_t.differences['$itp-main'] = _t.endVal - _t.startVal;
-			}
+            var stepDuration = 1000 / _.fps,
+                steps = _t.tweenDuration / stepDuration;
 
-			_t.hasStarted = true;
-			_t.stpFn = function() {
-				if (steps >= 0 && _t.hasStarted) {
-					var s = _t.tweenDuration;
-					s = s - (steps * stepDuration);
-					steps--;
-					var vals = _t.differences.hasOwnProperty('$itp-main') ? _t.easing.call(_.easing, s, _t.startVal, _t.differences['$itp-main'], _t.tweenDuration) : {};
-					if (typeof vals === 'object') {
-						for (var v in _t.differences) {
-							vals[v] = _t.easing.call(_.easing, s, _t.startVal[v], _t.differences[v], _t.tweenDuration);
-						}
-					}
-					_t.onStep.call(_t, vals);
-				} else if (!_t.hasStarted) {
-					_.pipeline.remove(_t.name);
-					_t.onStopped.call(_t);
-				} else {
-					_.pipeline.remove(_t.name);
-					_t.hasStarted = false;
-					_t.isDelayed = false;
-					if (_t.repeatCount > 0 || _t.repeatCount === -1 || _t.repeatCount === Infinity) {
-						_t.repeatCount = _t.repeatCount < 0 || _t.repeatCount === Infinity ? _t.repeatCount : _t.repeatCount--;
-						_t.onComplete.call(_t, _t.endVal);
-						_t.start();
-					} else {
-						_t.hasCompleted = true;
-						_t.onComplete.call(_t, _t.endVal);
-						_t.andThen.call(_t);
-						_t.controller.q.shift();
-					}
-				}
-			};
-			_.pipeline.add(_t.name, _t.stpFn);
-			return _t;
-		},
-		stop : function() {
-			this.hasStarted = false;
-			return this;
-		},
-		pause : function() {
-			_.pipeline.remove(this.name);
-			return this;
-		},
-		play : function() {
-			if (_.pipeline.has(this.name)) return;
-			_.pipeline.add(this.name, this.stpFn);
-			return this;
-		},
-		queue : function() {
-			return this.controller.queue();
-		}
-	}
+            if (typeof _t.endVal === 'object') {
+                if (typeof _t.startVal !== 'object') {
+                    _t.startVal = {};
+                }
+                for (var val in _t.endVal) {
+                    if (!_t.startVal.hasOwnProperty(val)) {
+                        _t.startVal[val] = 0;
+                    }
+                    _t.differences[val] = _t.endVal[val] - _t.startVal[val];
+                }
+            } else {
+                _t.differences['$itp-main'] = _t.endVal - _t.startVal;
+            }
 
-	var _iN = function(fps) {
-		_.fps = fps;
-		_.pipeline.setFPS(_.fps);
-		return _iN;
-	};
+            _t.hasStarted = true;
+            _t.stpFn = function() {
+                if (steps >= 0 && _t.hasStarted) {
+                    var s = _t.tweenDuration;
+                    s = s - (steps * stepDuration);
+                    steps--;
+                    var vals = _t.differences.hasOwnProperty('$itp-main') ? _t.easing.call(_.easing, s, _t.startVal, _t.differences['$itp-main'], _t.tweenDuration) : {};
+                    if (typeof vals === 'object') {
+                        for (var v in _t.differences) {
+                            vals[v] = _t.easing.call(_.easing, s, _t.startVal[v], _t.differences[v], _t.tweenDuration);
+                        }
+                    }
+                    _t.onStep.call(_t, vals);
+                } else if (!_t.hasStarted) {
+                    _.pipeline.remove(_t.name);
+                    _t.onStopped.call(_t);
+                } else {
+                    _.pipeline.remove(_t.name);
+                    _t.hasStarted = false;
+                    _t.isDelayed = false;
+                    if (_t.repeatCount > 0 || _t.repeatCount === -1 || _t.repeatCount === Infinity) {
+                        _t.repeatCount = _t.repeatCount < 0 || _t.repeatCount === Infinity ? _t.repeatCount : _t.repeatCount--;
+                        _t.onComplete.call(_t, _t.endVal);
+                        _t.start();
+                    } else {
+                        _t.hasCompleted = true;
+                        _t.onComplete.call(_t, _t.endVal);
+                        _t.andThen.call(_t);
+                        _t.controller.q.shift();
+                    }
+                }
+            };
+            _.pipeline.add(_t.name, _t.stpFn);
+            return _t;
+        },
+        stop : function() {
+            this.hasStarted = false;
+            return this;
+        },
+        pause : function() {
+            _.pipeline.remove(this.name);
+            return this;
+        },
+        play : function() {
+            if (_.pipeline.has(this.name)) return;
+            _.pipeline.add(this.name, this.stpFn);
+            return this;
+        },
+        queue : function() {
+            return this.controller.queue();
+        }
+    }
 
-	_iN.easing = _.easing;
-	_iN.tween = function() {
-		return new _.Tween();
-	};
-	_iN.queue = function() {
-		return new _.TweenController().queue();
-	};
+    var _iN = function(fps) {
+        _.fps = fps;
+        _.pipeline.setFPS(_.fps);
+        return _iN;
+    };
 
-	_iN.pipeline = _.pipeline;
+    _iN.easing = _.easing;
+    _iN.tween = function() {
+        return new _.Tween();
+    };
+    _iN.queue = function() {
+        return new _.TweenController().queue();
+    };
 
-	return _iN;
+    _iN.pipeline = _.pipeline;
+
+    return _iN;
 
 });
 ; browserify_shim__define__module__export__(typeof Interpol != "undefined" ? Interpol : window.Interpol);
@@ -6304,55 +6348,55 @@ process.chdir = function (dir) {
  *  @return {string} - The Base64 encoded image.
  */
 function arrayBufferToBase64(arrayBuffer) {
-      var base64    = '';
-      var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    var base64    = '';
+    var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+    var bytes         = new Uint8Array(arrayBuffer);
+    var byteLength    = bytes.byteLength;
+    var byteRemainder = byteLength % 3;
+    var mainLength    = byteLength - byteRemainder;
+
+    var a, b, c, d;
+    var chunk;
+
+    // Main loop deals with bytes in chunks of 3
+    for (var i = 0; i < mainLength; i = i + 3) {
+        // Combine the three bytes into a single integer
+        chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
      
-      var bytes         = new Uint8Array(arrayBuffer);
-      var byteLength    = bytes.byteLength;
-      var byteRemainder = byteLength % 3;
-      var mainLength    = byteLength - byteRemainder;
+        // Use bitmasks to extract 6-bit segments from the triplet
+        a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
+        b = (chunk & 258048)   >> 12; // 258048   = (2^6 - 1) << 12
+        c = (chunk & 4032)     >>  6; // 4032     = (2^6 - 1) << 6
+        d = chunk & 63;               // 63       = 2^6 - 1
      
-      var a, b, c, d;
-      var chunk;
+        // Convert the raw binary segments to the appropriate ASCII encoding
+        base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
+    }
+
+    // Deal with the remaining bytes and padding
+    if (byteRemainder == 1) {
+        chunk = bytes[mainLength];
      
-      // Main loop deals with bytes in chunks of 3
-      for (var i = 0; i < mainLength; i = i + 3) {
-            // Combine the three bytes into a single integer
-            chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
-         
-            // Use bitmasks to extract 6-bit segments from the triplet
-            a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
-            b = (chunk & 258048)   >> 12; // 258048   = (2^6 - 1) << 12
-            c = (chunk & 4032)     >>  6; // 4032     = (2^6 - 1) << 6
-            d = chunk & 63;               // 63       = 2^6 - 1
-         
-            // Convert the raw binary segments to the appropriate ASCII encoding
-            base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d];
-      }
+        a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
      
-      // Deal with the remaining bytes and padding
-      if (byteRemainder == 1) {
-            chunk = bytes[mainLength];
-         
-            a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
-         
-            // Set the 4 least significant bits to zero
-            b = (chunk & 3)   << 4; // 3   = 2^2 - 1
-         
-            base64 += encodings[a] + encodings[b] + '==';
-      } else if (byteRemainder == 2) {
-            chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
-         
-            a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
-            b = (chunk & 1008)  >>  4; // 1008  = (2^6 - 1) << 4
-         
-            // Set the 2 least significant bits to zero
-            c = (chunk & 15)    <<  2; // 15    = 2^4 - 1
-         
-            base64 += encodings[a] + encodings[b] + encodings[c] + '=';
-      }
-      
-      return base64;
+        // Set the 4 least significant bits to zero
+        b = (chunk & 3)   << 4; // 3   = 2^2 - 1
+     
+        base64 += encodings[a] + encodings[b] + '==';
+    } else if (byteRemainder == 2) {
+        chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
+     
+        a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
+        b = (chunk & 1008)  >>  4; // 1008  = (2^6 - 1) << 4
+     
+        // Set the 2 least significant bits to zero
+        c = (chunk & 15)    <<  2; // 15    = 2^4 - 1
+     
+        base64 += encodings[a] + encodings[b] + encodings[c] + '=';
+    }
+
+    return base64;
 }
 
 /*
@@ -6402,9 +6446,9 @@ var Promise = require('bluebird'); // https://github.com/petkaantonov/bluebird
 
 /* Define variables */
 var assets = [],
-	buffers = {},
-	imageRegex = /\.(gif|jpeg|jpg|png)$/,
-	soundRegex = /\.(mp3|ogg)$/;
+    buffers = {},
+    imageRegex = /\.(gif|jpeg|jpg|png)$/,
+    soundRegex = /\.(mp3|ogg)$/;
 
 var sounds, images;
 
@@ -6417,23 +6461,23 @@ var imageLoader, soundLoader;
  */
 function organiseAssets() {
 
-	sounds = assets.filter(function(asset) {
-		return soundRegex.test(asset);
-	});
+    sounds = assets.filter(function(asset) {
+        return soundRegex.test(asset);
+    });
 
-	images = assets.filter(function(asset) {
-		return imageRegex.test(asset);
-	});
+    images = assets.filter(function(asset) {
+        return imageRegex.test(asset);
+    });
 
-	sounds.forEach(function(sound) {
-		if (!(sound in buffers)) buffers[sound] = SoundAsset(sound);
-	});
+    sounds.forEach(function(sound) {
+        if (!(sound in buffers)) buffers[sound] = SoundAsset(sound);
+    });
 
-	images.forEach(function(image) {
-		if (!(image in buffers)) buffers[image] = ImageAsset(image);
-	});
+    images.forEach(function(image) {
+        if (!(image in buffers)) buffers[image] = ImageAsset(image);
+    });
 
-	return AssetManager;
+    return AssetManager;
 }
 
 var AssetManager = {};
@@ -6445,12 +6489,12 @@ var AssetManager = {};
  *  @return {AssetManager} - Return Asset Manager for chainability.
  */
 AssetManager.add = function(urls) {
-	if (typeof urls === 'string') {
-		assets.push(urls);
-	} else {
-		assets = assets.concat(urls);
-	}
-	return organiseAssets();
+    if (typeof urls === 'string') {
+        assets.push(urls);
+    } else {
+        assets = assets.concat(urls);
+    }
+    return organiseAssets();
 };
 
 /*
@@ -6459,28 +6503,28 @@ AssetManager.add = function(urls) {
  *  @return {Promise} - A promise that resolves when all assets are loaded.
  */
 AssetManager.preload = function() {
-	organiseAssets();
+    organiseAssets();
 
-	imageLoader = new BufferLoader(images, ImageAsset);
-	soundLoader = new BufferLoader(sounds, SoundAsset);
+    imageLoader = new BufferLoader(images, ImageAsset);
+    soundLoader = new BufferLoader(sounds, SoundAsset);
 
-	return Promise.all(
-		[
-			soundLoader.load(),
-			imageLoader.load()
-		]
-	).then(function(response) {
-		var snd = response[0],
-			img = response[1];
+    return Promise.all(
+        [
+            soundLoader.load(),
+            imageLoader.load()
+        ]
+    ).then(function(response) {
+        var snd = response[0],
+            img = response[1];
 
-		snd.forEach(function(obj) {
-			buffers[obj.source] = obj;
-		});
+        snd.forEach(function(obj) {
+            buffers[obj.source] = obj;
+        });
 
-		img.forEach(function(obj) {
-			buffers[obj.source] = obj;
-		});
-	});
+        img.forEach(function(obj) {
+            buffers[obj.source] = obj;
+        });
+    });
 
 };
 
@@ -6490,8 +6534,8 @@ AssetManager.preload = function() {
  *  @return {*} - Return the asset from the asset list or undefined.
  */
 AssetManager.get = function(url) {
-	organiseAssets();
-	if (url in buffers) return buffers[url];
+    organiseAssets();
+    if (url in buffers) return buffers[url];
 };
 
 module.exports = AssetManager;
@@ -6627,124 +6671,124 @@ var Config = require('../config');
 var AssetManager = require('../assetmanager');
 
 var Particle = {
-	x: 0, y: 0,
-	sx: 0, sy: 0,
-	vx: 0, vy: 0,
-	radius: 10, color: '#ffffff'
+    x: 0, y: 0,
+    sx: 0, sy: 0,
+    vx: 0, vy: 0,
+    radius: 10, color: '#ffffff'
 };
 
 Particle.init = function(x, y, vx, vy, radius, color) {
-	this.x = x || this.x;
-	this.y = y || this.y;
-	this.sx = x || this.x;
-	this.sy = y || this.y;
-	this.vx = vx || this.vx;
-	this.vy = vy || this.vy;
-	this.radius = radius || this.radius;
-	this.color = color || this.color;
+    this.x = x || this.x;
+    this.y = y || this.y;
+    this.sx = x || this.x;
+    this.sy = y || this.y;
+    this.vx = vx || this.vx;
+    this.vy = vy || this.vy;
+    this.radius = radius || this.radius;
+    this.color = color || this.color;
 };
 
 Particle.update = function(width, height, vx, vy) {
-	this.x += this.vx + (vx || 0);
-	this.y += this.vy + (vy || 0);
-	if (this.x < -(this.radius) || (this.x - this.radius) > width || this.y < -(this.radius) || (this.y - this.radius) > height) {
-		this.x = this.sx;
-		this.y = this.sy;
-	}
+    this.x += this.vx + (vx || 0);
+    this.y += this.vy + (vy || 0);
+    if (this.x < -(this.radius) || (this.x - this.radius) > width || this.y < -(this.radius) || (this.y - this.radius) > height) {
+        this.x = this.sx;
+        this.y = this.sy;
+    }
 };
 
 var ParticleSystem = {
-	particles: []
+    particles: []
 };
 
 ParticleSystem.init = function(numOfParticles, startX, startY) {
-	this.particles = [];
+    this.particles = [];
 
-	for (var i = 0; i < numOfParticles; i++) {
-		var particle = Object.create(Particle);
-		particle.init(
-			startX,
-			startY,
-			$.floatRange(-1, 1),
-			$.floatRange(-1, 1),
-			$.floatRange(15, 30),
-			'rgba(' + $.range(0, 255) + ',' + $.range(0, 255) + ',' + $.range(0, 255) + ',' + $.floatRange(0.1, 0.7) + ')'
-		);
-		this.particles.push(particle);
-	}
+    for (var i = 0; i < numOfParticles; i++) {
+        var particle = Object.create(Particle);
+        particle.init(
+            startX,
+            startY,
+            $.floatRange(-1, 1),
+            $.floatRange(-1, 1),
+            $.floatRange(15, 30),
+            'rgba(' + $.range(0, 255) + ',' + $.range(0, 255) + ',' + $.range(0, 255) + ',' + $.floatRange(0.1, 0.7) + ')'
+        );
+        this.particles.push(particle);
+    }
 
 };
 
 
 var Background = {
-	target: undefined,
-	canvas: undefined,
-	context: undefined,
-	system: undefined
+    target: undefined,
+    canvas: undefined,
+    context: undefined,
+    system: undefined
 };
 
 Background.init = function(target) {
-	var _self = this;
-	_self.target = target;
+    var _self = this;
+    _self.target = target;
 
-	_self.canvas = document.createElement('canvas');
+    _self.canvas = document.createElement('canvas');
 
-	var setDimensions = (function sD() {
-		_self.canvas.width = $.windowWidth();
-		_self.canvas.height = $.windowHeight();
-		return sD;
-	})();
+    var setDimensions = (function sD() {
+        _self.canvas.width = $.windowWidth();
+        _self.canvas.height = $.windowHeight();
+        return sD;
+    })();
 
-	_self.system = Object.create(ParticleSystem);
-	_self.system.init(250, _self.canvas.width / 2, _self.canvas.height / 2);
+    _self.system = Object.create(ParticleSystem);
+    _self.system.init(250, _self.canvas.width / 2, _self.canvas.height / 2);
 
-	window.addEventListener('resize', setDimensions);
+    window.addEventListener('resize', setDimensions);
 
-	_self.target.appendChild(_self.canvas);
-	_self.context = _self.canvas.getContext('2d');
+    _self.target.appendChild(_self.canvas);
+    _self.context = _self.canvas.getContext('2d');
 
-	if (Config.global.useBackgroundAnimation) Interpol.pipeline.add('background', _self.render.bind(_self));
+    if (Config.global.useBackgroundAnimation) Interpol.pipeline.add('background', _self.render.bind(_self));
 
-	$.emitter.on('global_config_change', function(key, value) {
-		if (key === 'useBackgroundAnimation') {
-			if (value && !Interpol.pipeline.has('background')) {
-				Interpol.pipeline.add('background', _self.render.bind(_self));
-			} else if (Interpol.pipeline.has('background')) {
-				Interpol.pipeline.remove('background');
-				_self.context.clearRect(0, 0, _self.canvas.width, _self.canvas.height);
-			}
-		}
-	});
+    $.emitter.on('global_config_change', function(key, value) {
+        if (key === 'useBackgroundAnimation') {
+            if (value && !Interpol.pipeline.has('background')) {
+                Interpol.pipeline.add('background', _self.render.bind(_self));
+            } else if (Interpol.pipeline.has('background')) {
+                Interpol.pipeline.remove('background');
+                _self.context.clearRect(0, 0, _self.canvas.width, _self.canvas.height);
+            }
+        }
+    });
 };
 
 Background.render = function() {
-	// console.log(this.context);
-	this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // console.log(this.context);
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-	var img = new Image();
-	img.src = AssetManager.get('assets/img/playlogo-sml.png').uri();
+    var img = new Image();
+    img.src = AssetManager.get('assets/img/playlogo-sml.png').uri();
 
-	for (var i = 0; i < this.system.particles.length; i++) {
-		var particle = this.system.particles[i];
-		particle.update(this.canvas.width, this.canvas.height);
-		//particle.update(this.canvas.width, this.canvas.height, $.floatRange(-1, 1), $.floatRange(-1, 0));
+    for (var i = 0; i < this.system.particles.length; i++) {
+        var particle = this.system.particles[i];
+        particle.update(this.canvas.width, this.canvas.height);
+        //particle.update(this.canvas.width, this.canvas.height, $.floatRange(-1, 1), $.floatRange(-1, 0));
 
-		this.context.drawImage(img, particle.x, particle.y, particle.radius, particle.radius);
+        this.context.drawImage(img, particle.x, particle.y, particle.radius, particle.radius);
 
-		// this.context.beginPath();
-		// this.context.fillStyle = particle.color;
-		// this.context.arc(particle.x,particle.y,particle.radius,0,Math.PI*2,true);
-		// this.context.fill();
-	}
+        // this.context.beginPath();
+        // this.context.fillStyle = particle.color;
+        // this.context.arc(particle.x,particle.y,particle.radius,0,Math.PI*2,true);
+        // this.context.fill();
+    }
 };
 
 Background.remove = function() {
-	this.target.removeChild(this.canvas);
-	Interpol.pipeline.remove('background');
+    this.target.removeChild(this.canvas);
+    Interpol.pipeline.remove('background');
 };
 
 module.exports = Background;
-},{"../assetmanager":41,"../config":46,"../utilities":56,"interpol":2}],46:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":57,"interpol":2}],46:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Configuration
@@ -6759,17 +6803,17 @@ var global = {};
 
 /* Let's define some global configuration options that will emit an event when they are set */
 ['displayMetrics', 'useSound', 'useAccelerometer', 'useGamification', 'useDynamicLighting', 'useBackgroundAnimation', 'useMessaging'].forEach(function(key) {
-	var val = false;
-	Object.defineProperty(global, key, {
-		enumerable: true,
-		set: function(value) {
-			val = value;
-			$.emitter.emit('global_config_change', key, val);
-		},
-		get: function() {
-			return val;
-		}
-	});
+    var val = false;
+    Object.defineProperty(global, key, {
+        enumerable: true,
+        set: function(value) {
+            val = value;
+            $.emitter.emit('global_config_change', key, val);
+        },
+        get: function() {
+            return val;
+        }
+    });
 });
 
 /* Initial global defaults */
@@ -6781,59 +6825,59 @@ global.useDynamicLighting = true;
 
 /* Individual cube specific configuration variables */
 var cube = {
-	useInertia: false,
-	useBackgrounds: true,
-	useContent: false,
-	useVideo: false,
-	useGif: false,
-	isSequential: false,
-	normaliseFacialRotation: false
+    useInertia: false,
+    useBackgrounds: true,
+    useContent: false,
+    useVideo: false,
+    useGif: false,
+    isSequential: false,
+    normaliseFacialRotation: true
 };
 
 /* Configuration options titles */
 var titles = {
-	displayMetrics: 'Display Metrics',
-	useSound: 'Sound',
-	useMessaging: 'Post Messaging',
-	useGamification: 'Gamification',
-	useDynamicLighting: 'Dynamic Lighting',
-	useBackgroundAnimation: 'Background Animation',
-	useInertia: 'Inertial Interaction',
-	useAccelerometer: 'Accelerometer',
-	useBackgrounds: 'Face Backgrounds',
-	useContent: 'Face Content',
-	useVideo: 'Video Face Content',
-	useGif: 'GIF Face Content',
-	isSequential: 'Sequential Interaction',
-	normaliseFacialRotation: 'Normalise Face Rotation'
+    displayMetrics: 'Display Metrics',
+    useSound: 'Sound',
+    useMessaging: 'Post Messaging',
+    useGamification: 'Gamification',
+    useDynamicLighting: 'Dynamic Lighting',
+    useBackgroundAnimation: 'Background Animation',
+    useInertia: 'Inertial Interaction',
+    useAccelerometer: 'Accelerometer',
+    useBackgrounds: 'Face Backgrounds',
+    useContent: 'Face Content',
+    useVideo: 'Video Face Content',
+    useGif: 'GIF Face Content',
+    isSequential: 'Sequential Interaction',
+    normaliseFacialRotation: 'Normalise Face Rotation'
 };
 
 /* Configuration options descriptions */
 var descriptions = {
-	displayMetrics: 'Display fps (frames per second) and frame time (in milliseconds).',
-	useSound: 'Have sounds throughout the Ad.',
-	useMessaging: 'For interaction with Ad Server APIs as an Iframe.',
-	useGamification: 'Puzzle comprised of four cubes, match the sides to "win".',
-	useDynamicLighting: 'Dynamically light the cubes with a forward facing light.',
-	useBackgroundAnimation: 'Turn on a simple background animation for performance testing.',
-	useInertia: 'Allow the user to "flick" the cube and it to gradually halt movement.',
-	useAccelerometer: 'Turn on rotation from Accelerometer/Gyro data.',
-	useBackgrounds: 'Show backgrounds on the cube faces.',
-	useContent: 'Show content on the cube faces.',
-	useVideo: 'Show a video on one face of the cube.',
-	useGif: 'Show a GIF on one face of the cube.',
-	isSequential: 'Always display the next face of the cube no matter which way it turns.',
-	normaliseFacialRotation: 'Always display cube faces at the correct orientation.'
+    displayMetrics: 'Display fps (frames per second) and frame time (in milliseconds).',
+    useSound: 'Have sounds throughout the Ad.',
+    useMessaging: 'For interaction with Ad Server APIs as an Iframe.',
+    useGamification: 'Puzzle comprised of four cubes, match the sides to "win".',
+    useDynamicLighting: 'Dynamically light the cubes with a forward facing light.',
+    useBackgroundAnimation: 'Turn on a simple background animation for performance testing.',
+    useInertia: 'Allow the user to "flick" the cube and it to gradually halt movement.',
+    useAccelerometer: 'Turn on rotation from Accelerometer/Gyro data.',
+    useBackgrounds: 'Show backgrounds on the cube faces.',
+    useContent: 'Show content on the cube faces.',
+    useVideo: 'Show a video on one face of the cube.',
+    useGif: 'Show a GIF on one face of the cube.',
+    isSequential: 'Always display the next face of the cube no matter which way it turns.',
+    normaliseFacialRotation: 'Always display cube faces at the correct orientation.'
 };
 
 /* Let's expose these objects */
 module.exports = {
-	global: global,
-	cube: cube,
-	titles: titles,
-	descriptions: descriptions
+    global: global,
+    cube: cube,
+    titles: titles,
+    descriptions: descriptions
 };
-},{"./utilities":56}],47:[function(require,module,exports){
+},{"./utilities":57}],47:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Component Base Class
@@ -6898,7 +6942,7 @@ var Common = {
 };
 
 module.exports = Common;
-},{"../utilities":56}],48:[function(require,module,exports){
+},{"../utilities":57}],48:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Content Matrix
@@ -7013,7 +7057,7 @@ var content = {
 };
 
 module.exports = content;
-},{"../../config":46,"../../messaging":54,"../../utilities":56}],49:[function(require,module,exports){
+},{"../../config":46,"../../messaging":55,"../../utilities":57}],49:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Face Class
@@ -7043,15 +7087,15 @@ var Face = Object.create(Common);
  *  @param {parent} - The Face's parent `Cube`.
  */
 Face.init = function(width, height, index, name, target, parent) {
-	this.parent = parent;
-	this.parentID = parent.id;
+    this.parent = parent;
+    this.parentID = parent.id;
 
-	/* `super` the Base Class */
-	Common.init.apply(this, arguments);
+    /* `super` the Base Class */
+    Common.init.apply(this, arguments);
 
-	this.element.setAttribute('parent', this.parentID);
-	this.translate.Z = this.width / 2;
-	this.renderedZ = this.rotation.Z;
+    this.element.setAttribute('parent', this.parentID);
+    this.translate.Z = this.width / 2;
+    this.renderedZ = this.rotation.Z;
 };
 
 /*
@@ -7060,19 +7104,19 @@ Face.init = function(width, height, index, name, target, parent) {
  *  @return {HTMLElement} - A HTML Element.
  */
 Face.getElement = function() {
-	return this.populateElement(
-		$.getElement(
-			'div',
-			'side no' + (this.index + 1),
-			{
-				index : this.index
-			},
-			{
-				width : this.width + 'px',
-				height: this.height + 'px'
-			}
-		)
-	);
+    return this.populateElement(
+        $.getElement(
+            'div',
+            'side no' + (this.index + 1),
+            {
+                index : this.index
+            },
+            {
+                width : this.width + 'px',
+                height: this.height + 'px'
+            }
+        )
+    );
 };
 
 /*
@@ -7082,36 +7126,36 @@ Face.getElement = function() {
  *  @return {HTMLElement} - The populated HTML Element.
  */
 Face.populateElement = function(elem) {
-	var c = content.sides[this.index];
-	
-	if (this.parent.config.useBackgrounds) {
-		var img = new Image();
-		var url = $.format(content.background, { i: this.index + 1, name: this.name });
-		img.src = AssetManager.get(url).uri();
-		img.width = this.width;
-		img.height = this.height;
+    var c = content.sides[this.index];
+    
+    if (this.parent.config.useBackgrounds) {
+        var img = new Image();
+        var url = $.format(content.background, { i: this.index + 1, name: this.name });
+        img.src = AssetManager.get(url).uri();
+        img.width = this.width;
+        img.height = this.height;
 
-		elem.appendChild(img);
-	}
+        elem.appendChild(img);
+    }
 
-	if (this.parent.config.useContent) {
-		var span = document.createElement('span');
-		span.className = 'content';
-		span.innerHTML = c.html(this.parent.config);
+    if (this.parent.config.useContent) {
+        var span = document.createElement('span');
+        span.className = 'content';
+        span.innerHTML = c.html(this.parent.config);
 
-		elem.appendChild(span);
+        elem.appendChild(span);
 
-		c.onload(elem, this.parent.config);
-	}
+        c.onload(elem, this.parent.config);
+    }
 
-	var shadow = document.createElement('div');
-	shadow.className = 'shadow';
-	shadow.style.width = this.width + 'px';
-	shadow.style.height = this.height + 'px';
+    var shadow = document.createElement('div');
+    shadow.className = 'shadow';
+    shadow.style.width = this.width + 'px';
+    shadow.style.height = this.height + 'px';
 
-	elem.appendChild(shadow);
+    elem.appendChild(shadow);
 
-	return elem;
+    return elem;
 };
 
 /*
@@ -7121,39 +7165,178 @@ Face.populateElement = function(elem) {
  *  @return {integer} - The index transformed accordingly for Matrix length.
  */
 Face.changeContent = function(index) {
-	index = index >= content.sides.length ? 0 : index;
-	var c = content.sides[index];
+    index = index >= content.sides.length ? 0 : index;
+    var c = content.sides[index];
 
-	if (this.parent.config.useBackgrounds) {
-		var img = $('img', this.element)[0];
-		var url = $.format(content.background, { i: index + 1, name: this.name });
-		img.src = AssetManager.get(url).uri();
-	}
+    if (this.parent.config.useBackgrounds) {
+        var img = $('img', this.element)[0];
+        var url = $.format(content.background, { i: index + 1, name: this.name });
+        img.src = AssetManager.get(url).uri();
+    }
 
-	if (this.parent.config.useContent) {
-		var span = $('.content', this.element)[0];
-		span.innerHTML = c.html(this.parent.config);
+    if (this.parent.config.useContent) {
+        var span = $('.content', this.element)[0];
+        span.innerHTML = c.html(this.parent.config);
 
-		c.onload(this.element, this.parent.config);
-	}
+        c.onload(this.element, this.parent.config);
+    }
 
-	return index;
+    return index;
 };
 
 /*
  *  Face.render - Override `render` on the Base Class.
  */
 Face.render = function() {
-	this.renderedZ = this.rotation.Z;
+    this.renderedZ = this.rotation.Z;
 
-	/* `super` the Base Class */
-	Common.render.apply(this);
+    /* `super` the Base Class */
+    Common.render.apply(this);
 };
 
 module.exports = Face;
 
 
-},{"../assetmanager":41,"../config":46,"../utilities":56,"./common":47,"./content":48}],50:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":57,"./common":47,"./content":48}],50:[function(require,module,exports){
+var $ = require('../utilities');
+var Config = require('../config');
+var Vect3 = require('./vect3');
+var AssetManager = require('../assetmanager');
+
+
+var Interpol = require('interpol');
+
+
+var Fold = {
+    init: function(cube, faceIndex) {
+        this.width = cube.width;
+        this.height = cube.height;
+        this.target = cube.target;
+        this.faceIndex = faceIndex;
+        this.cubeIndex = cube.index;
+        this.cubeRotation = cube.rotation;
+        this.folds = [];
+
+        var styles = {
+            width: this.width * 2 + 'px',
+            height: this.height * 2 + 'px'
+        };
+
+        styles[$.CSS_TRANSFORM] = 'translateZ(' + Math.ceil(this.width / 2) + 'px)';
+
+        /* Select the `light` from DOM */
+        this.light = $('[role="light"]')[0];
+        
+        /* The light never moves so define the `lightTransform` on `init` */
+        this.lightTransform = $.getTransform(this.light);
+
+        this.element = $.getElement('div', 'fold-container', {}, styles);
+        this.target.appendChild(this.element);
+        populateElement.call(this);
+
+        function populateElement() {
+            for (var i = 0; i < 4; i++) {
+                var styles = {
+                    left: $.isEven(i) ? 0 : this.width + 'px',
+                    top: i > 1 ? this.height + 'px' : 0,
+                    width: this.width + 'px',
+                    height: this.height + 'px'
+                };
+
+                var transformOrigin = i === 0 ? '50% 100%' : i === 1 ? '0 50%' : i === 2 ? '100% 50%' : '50% 0',
+                    startValue = i < 2 ? -91 : 91,
+                    rotationAxis = i === 0 || i === 3 ? 'X' : 'Y';
+
+                styles[$.CSS_TRANSFORM_ORIGIN] = transformOrigin;
+                styles[$.CSS_TRANSFORM] = 'rotate' + rotationAxis + '(' + startValue + 'deg)';
+
+                var fold = $.getElement('div', 'fold', {}, styles);
+
+                var img = new Image();
+                var src = 'assets/img/cubes/cube0' + (i + 1) + '/side' + (this.faceIndex + 1) + '.jpg';
+                img.src = AssetManager.get(src).uri();
+                img.width = this.width;
+                img.height = this.height;
+
+                fold.appendChild(img);
+
+                var shadow = $.getElement('div', 'shadow', {}, {});
+                fold.appendChild(shadow);
+
+                this.element.appendChild(fold);
+
+                this.folds.push({
+                    start: startValue,
+                    axis: rotationAxis,
+                    element: fold,
+                    shadow: shadow
+                });
+            }
+        }
+
+        function animateFolds() {
+            var _self = this;
+
+            var indexes = [0, 1, 3, 2, 0, 1, 3, 2];
+            indexes = indexes.splice(indexes.indexOf(this.cubeIndex), 4);
+
+            indexes.forEach(function(index, i, arr) {
+                var fold = _self.folds[index];
+                if (i === 0) {
+                    fold.element.style[$.CSS_TRANSFORM] = 'rotate' + fold.axis + '(0deg)';
+                    fold.shadow.style.opacity = 0;
+                    return;
+                }
+
+                var time = 200;
+                var delay = i * time;
+
+                Interpol.tween()
+                    .from(fold.start)
+                    .to(0)
+                    .delay(delay)
+                    .duration(time)
+                    .step(function(val) {
+                        fold.element.style[$.CSS_TRANSFORM] = 'rotate' + fold.axis + '(' + val + 'deg)';
+
+                        /* If no dynamic lighting, remove all shadows and exit this function */
+                        if (!Config.global.useDynamicLighting) {
+                            fold.shadow.style.opacity = 0;
+                            return;
+                        }
+
+                        /* Dynamic Lighting */
+                        var foldTransform = $.getTransform(fold.element),
+                            lightPosition = Vect3.rotate(_self.lightTransform.translate, Vect3.muls(foldTransform.rotate, -1));
+
+                        var verticies = $.computeVertexData(fold.element);
+                        var center = Vect3.divs(Vect3.sub(verticies.c, verticies.a), 2);
+                        var normal = Vect3.normalize(Vect3.cross(Vect3.sub(verticies.b, verticies.a), Vect3.sub(verticies.c, verticies.a)));
+
+                        var direction = Vect3.normalize(Vect3.sub(lightPosition, center));
+                        var amount = 0.75 - Math.max(0, Vect3.dot(normal, direction)).toFixed(3);
+
+                        if (fold.light !== amount) {
+                            fold.light = amount;
+                            fold.shadow.style.opacity = amount;
+                        }
+                    })
+                    .complete(function() {
+                        if (i === (arr.length - 1)) $.emitter.emit('fold_out_complete', _self.cubeRotation);
+                    })
+                    .start(function() {
+                        $.emitter.emit('fold_out_start', index, time * 0.5);
+                    });
+
+            });
+        }
+
+        animateFolds.call(this);
+    }
+};
+
+module.exports = Fold;
+},{"../assetmanager":41,"../config":46,"../utilities":57,"./vect3":53,"interpol":2}],51:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Class
@@ -7168,6 +7351,7 @@ var $ = require('../utilities');
 var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
+var Fold = require('./fold');
 var Config = require('../config');
 var Interpol = require('interpol');
 var AssetManager = require('../assetmanager');
@@ -7182,25 +7366,6 @@ var Cube = Object.create(Common);
  *  @return {HTMLElement} - A HTML Element.
  */
 Cube.getElement = function() {
-    // var styles = {
-    //     width: $.windowWidth() / 2 + 'px',
-    //     height: $.windowHeight() / 2 + 'px'
-    // };
-
-    // // var tx = ($.isOdd(this.index + 1) ? -(this.width * 1.3) : 0) + 'px';
-    // // var ty = (this.index < 2 ? -(this.height * 1.3) : 0) + 'px';
-
-    // // styles[$.CSS_TRANSFORM] = 'translate(' + tx + ',' + ty + ')';
-
-    // var mask = $.getElement('div', 'cube-mask', {}, styles);
-
-    // this.target.appendChild(mask);
-
-    // /* Translate the Cube on the z axis */
-    // this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
-
-    // this.target = mask;
-
     return $.getElement('div', 'cube', { index: this.index }, {
         width: this.width + 'px',
         height: this.height + 'px'
@@ -7242,13 +7407,22 @@ Cube.init = function(width, height, index, name, target, config) {
 
     /*
      *  renderFaces [private] - Render the faces of the Cube.
+     *  @param {useReset} - Boolean determining whether we should reset the cube back to 0,0,0.
      */
-    function renderFaces() {
+    function renderFaces(useReset) {
         /* Reset variables and remove existing faces */
         _self.nextFaceIndex = 0;
         _self.faces.forEach(function(face) {
             face.remove();
         });
+
+        var oldRot;
+
+        if (useReset) {
+            oldRot = $.clone(_self.rotation);
+            _self.rotation = { X: 0, Y: 0, Z: 0 };
+            _self.render();
+        }
 
         /* Populate the Cube's `faces` array with Faces */
         _self.faces = [];
@@ -7276,6 +7450,11 @@ Cube.init = function(width, height, index, name, target, config) {
                 elem: elem
             };
         });
+
+        if (useReset && oldRot) {
+            _self.rotation = oldRot;
+            _self.render();
+        }
     }
 
     /* Call `renderFaces` on `init` */
@@ -7285,10 +7464,17 @@ Cube.init = function(width, height, index, name, target, config) {
     this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
     this.element.addEventListener('touchstart', touchStart);
 
+    this.element.addEventListener('doubletap', function(e) {
+        var face = getFaceFromTarget(e.target);
+        var fold = Object.create(Fold);
+        fold.init(_self, face.index);
+    });
+
     /* Expose private functions as public on the Cube */
     this.getFaceFromTarget = getFaceFromTarget;
     this.getNormalisedFaceRotation = normaliseFaces;
-    this.rerenderFaces = renderFaces;
+    this.rerenderFaces = renderFaces.bind(this, true);
+    this.resetNormalisedFaces = resetNormalisedFaces;
 
     /* Private variables */
     var startX, startY, startT,
@@ -7299,7 +7485,7 @@ Cube.init = function(width, height, index, name, target, config) {
         current, change,
         hasMoved, changedDirection,
         endTween, oTween, interactedSide,
-        moveStartT, moveStartX, moveStartY;
+        moveStartT, moveStartX, moveStartY, lastMoveT;
 
     var decouple;
 
@@ -7310,6 +7496,16 @@ Cube.init = function(width, height, index, name, target, config) {
     document.addEventListener('touchend', function() {
         if (decouple) decouple();
     });
+
+    /*
+     *  resetNormalisedFaces [private] - Reset all faces Z-rotation back to 0.
+     */
+    function resetNormalisedFaces() {
+        _self.faces.forEach(function(face) {
+            face.rotation.Z = 0;
+            face.render();
+        });
+    }
 
     /*
      *  addCubeChangeListener [private] - Add a listener for when the cube has been touched
@@ -7445,6 +7641,8 @@ Cube.init = function(width, height, index, name, target, config) {
             moveStartY = currentY;
         }
 
+        lastMoveT = Date.now();
+
         /* We are sure we have moved by this point */
         hasMoved = true;
 
@@ -7511,6 +7709,8 @@ Cube.init = function(width, height, index, name, target, config) {
         var diffDistance = direction === 'leftright' ? moveDistX : moveDistY;
         var diffTime = moveEndT - moveStartT;
 
+        var diffTimeSinceLastMove = moveEndT - lastMoveT;
+
         /* Transform the distance moved based on direction of movement */
         diffDistance = diffDistance < 0 && (rDirection === 'right' || rDirection === 'down') ? Math.abs(diffDistance) : diffDistance;
         diffDistance = diffDistance > 0 && (rDirection === 'left' || rDirection === 'up') ? -diffDistance : diffDistance;
@@ -7529,15 +7729,16 @@ Cube.init = function(width, height, index, name, target, config) {
          * If using inertia determine the new value to animate to, otherwise determine
          * one rotation in the right direction from the `startValue`.
          */
-        if (_self.config.useInertia) {
-            val = val - determineCalculation(Math[velocity < 0 ? 'min' : 'max'](velocity < 0 ? -(velMin) : velMin, Math.round(velocity * 2)) * 90);
+        if (_self.config.useInertia && Math.abs(velocity) > 0.8) {
+            var mathOp = velocity < 0 ? 'min' : 'max';
+            var val1 = velocity < 0 ? -velMin : velMin;
+            var val2 = Math.round(velocity * 2);
+
+            val = val - determineCalculation(Math[mathOp](val1, val2) * 90);
             perc = Math.abs(val - currentValue) / 90;
         } else {
-            if (direction === 'updown') {
-                val = (dirY === 'up') ? startValue + determineCalculation(90) : startValue - determineCalculation(90);
-            } else {
-                val = (dirX === 'left') ? startValue + determineCalculation(90) : startValue - determineCalculation(90);
-            }
+            var sV = $.nearest(startValue, 90);
+            val = (rDirection === 'up' || rDirection === 'left') ? sV + determineCalculation(90) : sV - determineCalculation(90);
         }
 
         var from = currentValue;
@@ -7741,7 +7942,7 @@ Cube.render = function() {
     while (++faceNum < faceCount) {
         face = this.faceData[this.nextFaceIndex];
         direction = Vect3.normalize(Vect3.sub(lightPosition, face.center));
-        amount = 1 - Math.max(0, Vect3.dot(face.normal, direction)).toFixed(2);
+        amount = 1 - Math.max(0, Vect3.dot(face.normal, direction)).toFixed(3);
         if (face.light != amount) {
             face.light = amount;
             face.elem.style.opacity = amount;
@@ -7751,646 +7952,646 @@ Cube.render = function() {
 };
 
 module.exports = Cube;
-},{"../assetmanager":41,"../config":46,"../utilities":56,"./common":47,"./face":49,"./matrix":51,"./vect3":52,"interpol":2}],51:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":57,"./common":47,"./face":49,"./fold":50,"./matrix":52,"./vect3":53,"interpol":2}],52:[function(require,module,exports){
 module.exports={
-	"0" : {
-		"0" : {
-			"0" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"270" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			}
-		},
-		"90" : {
-			"0" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 270,
-				"90" : 180,
-				"180" : 90,
-				"270" : 0
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 90,
-				"90" : 0,
-				"180" : 270,
-				"270" : 180
-			}
-		},
-		"180" : {
-			"0" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"90" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			}
-		},
-		"270" : {
-			"0" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 90,
-				"90" : 0,
-				"180" : 270,
-				"270" : 180
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 270,
-				"90" : 180,
-				"180" : 90,
-				"270" : 0
-			}
-		}
-	},
-	"1" : {
-		"0" : {
-			"0" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"90" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			}
-		},
-		"90" : {
-			"0" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 90,
-				"90" : 180,
-				"180" : 270,
-				"270" : 0
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 270,
-				"90" : 0,
-				"180" : 90,
-				"270" : 180
-			}
-		},
-		"180" : {
-			"0" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"270" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			}
-		},
-		"270" : {
-			"0" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 270,
-				"90" : 0,
-				"180" : 90,
-				"270" : 180
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 90,
-				"90" : 180,
-				"180" : 270,
-				"270" : 0
-			}
-		}
-	},
-	"2" : {
-		"0" : {
-			"0" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 0,
-				"90" : 180,
-				"180" : 180,
-				"270" : 180
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 180,
-				"270" : 0
-			}
-		},
-		"90" : {
-			"0" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 270,
-				"270" : 270
-			},
-			"90" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 180,
-				"270" : 0
-			},
-			"180" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 90,
-				"270" : 90
-			},
-			"270" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 0,
-				"270" : 180
-			}
-		},
-		"180" : {
-			"0" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 0,
-				"270" : 180
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 180,
-				"90" : 0,
-				"180" : 0,
-				"270" : 0
-			}
-		},
-		"270" : {
-			"0" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 90,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 180,
-				"90" : 0,
-				"180" : 180,
-				"270" : 180
-			},
-			"180" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 270,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 0,
-				"90" : 180,
-				"180" : 0,
-				"270" : 0
-			}
-		}
-	},
-	"3" : {
-		"0" : {
-			"0" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 180,
-				"270" : 0
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 0,
-				"90" : 180,
-				"180" : 180,
-				"270" : 180
-			}
-		},
-		"90" : {
-			"0" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 90,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 0,
-				"90" : 180,
-				"180" : 0,
-				"270" : 0
-			},
-			"180" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 270,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 180,
-				"90" : 0,
-				"180" : 180,
-				"270" : 180
-			}
-		},
-		"180" : {
-			"0" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 180,
-				"90" : 0,
-				"180" : 0,
-				"270" : 0
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 0,
-				"270" : 180
-			}
-		},
-		"270" : {
-			"0" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 270,
-				"270" : 270
-			},
-			"90" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 0,
-				"270" : 180
-			},
-			"180" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 90,
-				"270" : 90
-			},
-			"270" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 180,
-				"270" : 0
-			}
-		}
-	},
-	"4" : {
-		"0" : {
-			"0" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 90,
-				"90" : 270,
-				"180" : 90,
-				"270" : 90
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"270" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 270,
-				"270" : 90
-			}
-		},
-		"90" : {
-			"0" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 180,
-				"270" : 180
-			},
-			"90" : {
-				"0" : 270,
-				"90" : 90,
-				"180" : 90,
-				"270" : 90
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 0,
-				"270" : 0
-			},
-			"270" : {
-				"0" : 90,
-				"90" : 270,
-				"180" : 270,
-				"270" : 270
-			}
-		},
-		"180" : {
-			"0" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"90" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 90,
-				"270" : 270
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 270,
-				"90" : 90,
-				"180" : 270,
-				"270" : 270
-			}
-		},
-		"270" : {
-			"0" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 0,
-				"270" : 0
-			},
-			"90" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 270,
-				"270" : 90
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 180,
-				"270" : 180
-			},
-			"270" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 90,
-				"270" : 270
-			}
-		}
-	},
-	"5" : {
-		"0" : {
-			"0" : {
-				"0" : 0,
-				"90" : 270,
-				"180" : 180,
-				"270" : 90
-			},
-			"90" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 270,
-				"270" : 90
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 270,
-				"180" : 0,
-				"270" : 90
-			},
-			"270" : {
-				"0" : 90,
-				"90" : 270,
-				"180" : 90,
-				"270" : 90
-			}
-		},
-		"90" : {
-			"0" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 0,
-				"270" : 0
-			},
-			"90" : {
-				"0" : 270,
-				"90" : 270,
-				"180" : 90,
-				"270" : 270
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 180,
-				"270" : 180
-			},
-			"270" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 270,
-				"270" : 90
-			}
-		},
-		"180" : {
-			"0" : {
-				"0" : 0,
-				"90" : 90,
-				"180" : 180,
-				"270" : 270
-			},
-			"90" : {
-				"0" : 270,
-				"90" : 90,
-				"180" : 270,
-				"270" : 270
-			},
-			"180" : {
-				"0" : 180,
-				"90" : 90,
-				"180" : 0,
-				"270" : 270
-			},
-			"270" : {
-				"0" : 90,
-				"90" : 90,
-				"180" : 90,
-				"270" : 270
-			}
-		},
-		"270" : {
-			"0" : {
-				"0" : 180,
-				"90" : 180,
-				"180" : 180,
-				"270" : 180
-			},
-			"90" : {
-				"0" : 90,
-				"90" : 270,
-				"180" : 270,
-				"270" : 270
-			},
-			"180" : {
-				"0" : 0,
-				"90" : 0,
-				"180" : 0,
-				"270" : 0
-			},
-			"270" : {
-				"0" : 270,
-				"90" : 90,
-				"180" : 90,
-				"270" : 90
-			}
-		}
-	}
+    "0" : {
+        "0" : {
+            "0" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "270" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            }
+        },
+        "90" : {
+            "0" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 270,
+                "90" : 180,
+                "180" : 90,
+                "270" : 0
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 90,
+                "90" : 0,
+                "180" : 270,
+                "270" : 180
+            }
+        },
+        "180" : {
+            "0" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "90" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            }
+        },
+        "270" : {
+            "0" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 90,
+                "90" : 0,
+                "180" : 270,
+                "270" : 180
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 270,
+                "90" : 180,
+                "180" : 90,
+                "270" : 0
+            }
+        }
+    },
+    "1" : {
+        "0" : {
+            "0" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "90" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            }
+        },
+        "90" : {
+            "0" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 90,
+                "90" : 180,
+                "180" : 270,
+                "270" : 0
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 270,
+                "90" : 0,
+                "180" : 90,
+                "270" : 180
+            }
+        },
+        "180" : {
+            "0" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "270" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            }
+        },
+        "270" : {
+            "0" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 270,
+                "90" : 0,
+                "180" : 90,
+                "270" : 180
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 90,
+                "90" : 180,
+                "180" : 270,
+                "270" : 0
+            }
+        }
+    },
+    "2" : {
+        "0" : {
+            "0" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 0,
+                "90" : 180,
+                "180" : 180,
+                "270" : 180
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 180,
+                "270" : 0
+            }
+        },
+        "90" : {
+            "0" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 270,
+                "270" : 270
+            },
+            "90" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 180,
+                "270" : 0
+            },
+            "180" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 90,
+                "270" : 90
+            },
+            "270" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 0,
+                "270" : 180
+            }
+        },
+        "180" : {
+            "0" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 0,
+                "270" : 180
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 180,
+                "90" : 0,
+                "180" : 0,
+                "270" : 0
+            }
+        },
+        "270" : {
+            "0" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 90,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 180,
+                "90" : 0,
+                "180" : 180,
+                "270" : 180
+            },
+            "180" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 270,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 0,
+                "90" : 180,
+                "180" : 0,
+                "270" : 0
+            }
+        }
+    },
+    "3" : {
+        "0" : {
+            "0" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 180,
+                "270" : 0
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 0,
+                "90" : 180,
+                "180" : 180,
+                "270" : 180
+            }
+        },
+        "90" : {
+            "0" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 90,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 0,
+                "90" : 180,
+                "180" : 0,
+                "270" : 0
+            },
+            "180" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 270,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 180,
+                "90" : 0,
+                "180" : 180,
+                "270" : 180
+            }
+        },
+        "180" : {
+            "0" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 180,
+                "90" : 0,
+                "180" : 0,
+                "270" : 0
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 0,
+                "270" : 180
+            }
+        },
+        "270" : {
+            "0" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 270,
+                "270" : 270
+            },
+            "90" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 0,
+                "270" : 180
+            },
+            "180" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 90,
+                "270" : 90
+            },
+            "270" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 180,
+                "270" : 0
+            }
+        }
+    },
+    "4" : {
+        "0" : {
+            "0" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 90,
+                "90" : 270,
+                "180" : 90,
+                "270" : 90
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "270" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 270,
+                "270" : 90
+            }
+        },
+        "90" : {
+            "0" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 180,
+                "270" : 180
+            },
+            "90" : {
+                "0" : 270,
+                "90" : 90,
+                "180" : 90,
+                "270" : 90
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 0,
+                "270" : 0
+            },
+            "270" : {
+                "0" : 90,
+                "90" : 270,
+                "180" : 270,
+                "270" : 270
+            }
+        },
+        "180" : {
+            "0" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "90" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 90,
+                "270" : 270
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 270,
+                "90" : 90,
+                "180" : 270,
+                "270" : 270
+            }
+        },
+        "270" : {
+            "0" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 0,
+                "270" : 0
+            },
+            "90" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 270,
+                "270" : 90
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 180,
+                "270" : 180
+            },
+            "270" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 90,
+                "270" : 270
+            }
+        }
+    },
+    "5" : {
+        "0" : {
+            "0" : {
+                "0" : 0,
+                "90" : 270,
+                "180" : 180,
+                "270" : 90
+            },
+            "90" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 270,
+                "270" : 90
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 270,
+                "180" : 0,
+                "270" : 90
+            },
+            "270" : {
+                "0" : 90,
+                "90" : 270,
+                "180" : 90,
+                "270" : 90
+            }
+        },
+        "90" : {
+            "0" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 0,
+                "270" : 0
+            },
+            "90" : {
+                "0" : 270,
+                "90" : 270,
+                "180" : 90,
+                "270" : 270
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 180,
+                "270" : 180
+            },
+            "270" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 270,
+                "270" : 90
+            }
+        },
+        "180" : {
+            "0" : {
+                "0" : 0,
+                "90" : 90,
+                "180" : 180,
+                "270" : 270
+            },
+            "90" : {
+                "0" : 270,
+                "90" : 90,
+                "180" : 270,
+                "270" : 270
+            },
+            "180" : {
+                "0" : 180,
+                "90" : 90,
+                "180" : 0,
+                "270" : 270
+            },
+            "270" : {
+                "0" : 90,
+                "90" : 90,
+                "180" : 90,
+                "270" : 270
+            }
+        },
+        "270" : {
+            "0" : {
+                "0" : 180,
+                "90" : 180,
+                "180" : 180,
+                "270" : 180
+            },
+            "90" : {
+                "0" : 90,
+                "90" : 270,
+                "180" : 270,
+                "270" : 270
+            },
+            "180" : {
+                "0" : 0,
+                "90" : 0,
+                "180" : 0,
+                "270" : 0
+            },
+            "270" : {
+                "0" : 270,
+                "90" : 90,
+                "180" : 90,
+                "270" : 90
+            }
+        }
+    }
 }
-},{}],52:[function(require,module,exports){
+},{}],53:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Vector3 Mathematics
@@ -8482,7 +8683,7 @@ var Vect3 = {
 };
 
 module.exports = Vect3;
-},{}],53:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 var $ = require('../utilities');
 var Config = require('../config');
 var Stats = require('stats');
@@ -8492,15 +8693,16 @@ var cubeUl;
 
 function init() {
 
-	addMetrics();
+    addMetrics();
 
-	var target = $('[role="debug"]')[0];
+    var target = $('[role="debug"]')[0];
 
     var closeBtn = document.createElement('div');
     closeBtn.className = 'close';
     closeBtn.addEventListener('click', function() {
         target.classList.add('hidden');
         document.addEventListener('touchmove', $.prevent);
+        $.emitter.emit('debug_panel', false);
     });
 
     var openBtn = document.createElement('div');
@@ -8509,6 +8711,7 @@ function init() {
     openBtn.addEventListener('click', function() {
         target.classList.remove('hidden');
         document.removeEventListener('touchmove', $.prevent);
+        $.emitter.emit('debug_panel', true);
     });
 
     var main = document.createElement('div');
@@ -8528,36 +8731,36 @@ function init() {
     main.appendChild(cubeUl);
 
 
-	var gTitle = document.createElement('h1');
-	gTitle.innerText = 'Global Properties';
+    var gTitle = document.createElement('h1');
+    gTitle.innerText = 'Global Properties';
 
-	main.appendChild(gTitle);
+    main.appendChild(gTitle);
 
-	var ul = document.createElement('ul');
-	
-	Object.keys(Config.global).forEach(function(key) {
-		var li = document.createElement('li');
-		var input = document.createElement('input');
-		input.type = 'checkbox';
-		input.id = key;
+    var ul = document.createElement('ul');
+    
+    Object.keys(Config.global).forEach(function(key) {
+        var li = document.createElement('li');
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = key;
 
-		if (Config.global[key]) input.setAttribute('checked', true);
+        if (Config.global[key]) input.setAttribute('checked', true);
 
-		input.addEventListener('change', function(e) {
-			Config.global[key] = e.target.checked;
-		});
+        input.addEventListener('change', function(e) {
+            Config.global[key] = e.target.checked;
+        });
 
-		var label = document.createElement('label');
-		label.setAttribute('for', key);
-		label.innerHTML = '<h1>' + Config.titles[key] + '</h1><p>' + Config.descriptions[key] + '</p>';
+        var label = document.createElement('label');
+        label.setAttribute('for', key);
+        label.innerHTML = '<h1>' + Config.titles[key] + '</h1><p>' + Config.descriptions[key] + '</p>';
 
-		li.appendChild(input);
-		li.appendChild(label);
+        li.appendChild(input);
+        li.appendChild(label);
 
-		ul.appendChild(li);
-	});
+        ul.appendChild(li);
+    });
 
-	main.appendChild(ul);
+    main.appendChild(ul);
 
     $.emitter.on('global_config_change', function(key, value) {
         var input = $('input#' + key, main)[0];
@@ -8572,7 +8775,7 @@ function init() {
 function addMetrics() {
     var target = $('[role="metrics"]')[0];
 
-	var fps = new Stats();
+    var fps = new Stats();
     fps.domElement.style.position = 'absolute';
     fps.domElement.style.right = '0px';
     fps.domElement.style.bottom = '0px';
@@ -8623,19 +8826,26 @@ function defineCubeProperties(cubes) {
         if (configs[0][key]) input.setAttribute('checked', true);
 
         input.addEventListener('change', function(e) {
+            var isChecked = e.target.checked;
+            
             configs.forEach(function(config) {
-                if ((key === 'useVideo' || key === 'useGif') && e.target.checked)  {
+                if ((key === 'useVideo' || key === 'useGif') && isChecked)  {
                     config['useContent'] = true;
                     $('input#useContent', cubeUl)[0].checked = true;
                 }
 
-                if (key === 'useContent' && !e.target.checked) {
+                if (key === 'useContent' && !isChecked) {
                     config['useVideo'] = config['useGif'] = false;
                     $('input#useVideo', cubeUl)[0].checked = false;
                     $('input#useGif', cubeUl)[0].checked = false;
                 }
 
-                config[key] = e.target.checked;
+                if (key === 'isSequential' && isChecked) {
+                    config['useInertia'] = false;
+                    $('input#useInertia', cubeUl)[0].checked = false;
+                }
+
+                config[key] = isChecked;
             });
 
             switch (key) {
@@ -8649,6 +8859,12 @@ function defineCubeProperties(cubes) {
                         cube.rerenderFaces();
                         cube.getNormalisedFaceRotation(cube.rotation, true);
                     });
+
+                    if (key === 'normaliseFacialRotation' && !isChecked) {
+                        cubes.forEach(function(cube) {
+                            cube.resetNormalisedFaces();
+                        });
+                    }
                     break;
             }
         });
@@ -8669,9 +8885,9 @@ module.exports = {
     init: init,
     defineCubeProperties: defineCubeProperties
 };
-},{"../config":46,"../utilities":56,"interpol":2,"stats":3}],54:[function(require,module,exports){
+},{"../config":46,"../utilities":57,"interpol":2,"stats":3}],55:[function(require,module,exports){
 var parentWindow,
-	parentOrigin;
+    parentOrigin;
 
 window.addEventListener('message', function(e) {
     console.log(e);
@@ -8688,15 +8904,15 @@ window.addEventListener('message', function(e) {
 });
 
 var Messaging = {
-	post: function(data) {
-		if (parentWindow && parentOrigin) {
-			parentWindow.postMessage(data, parentOrigin);
-		}
-	}
+    post: function(data) {
+        if (parentWindow && parentOrigin) {
+            parentWindow.postMessage(data, parentOrigin);
+        }
+    }
 };
 
 module.exports = Messaging;
-},{}],55:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 var $ = require('../utilities');
 var Interpol = require('interpol');
 var initialValues = { gamma: 0, beta: 0 };
@@ -8706,67 +8922,67 @@ var prevValues = { gamma: 0, beta: 0 };
 var elem;
 
 function handler(e) {
-	console.log('handler');
+    console.log('handler');
 
-	prevValues.gamma = cachedValues.gamma;
-	prevValues.beta = cachedValues.beta;
+    prevValues.gamma = cachedValues.gamma;
+    prevValues.beta = cachedValues.beta;
 
-	cachedValues.gamma = initialValues.gamma - e.gamma;
-	cachedValues.beta = initialValues.beta - e.beta;
+    cachedValues.gamma = initialValues.gamma - e.gamma;
+    cachedValues.beta = initialValues.beta - e.beta;
 }
 
 function render() {
 
-	var dt = 1 / 60;
-	var RC = 0.3;
-	var alpha = dt / (RC + dt);
+    var dt = 1 / 60;
+    var RC = 0.3;
+    var alpha = dt / (RC + dt);
 
-	var rX = (alpha * cachedValues.beta) + (1 - alpha) * prevValues.beta;
-	var rY = (alpha * cachedValues.gamma) + (1 - alpha) * prevValues.gamma;
+    var rX = (alpha * cachedValues.beta) + (1 - alpha) * prevValues.beta;
+    var rY = (alpha * cachedValues.gamma) + (1 - alpha) * prevValues.gamma;
 
-	rX *= 0.5;
-	rY *= 0.5;
+    rX *= 0.5;
+    rY *= 0.5;
 
-	elem.style[$.CSS_TRANSFORM] = 'rotateX(' + rX.toFixed(3) + 'deg) rotateY(' + rY.toFixed(3) + 'deg)';
+    elem.style[$.CSS_TRANSFORM] = 'rotateX(' + rX.toFixed(3) + 'deg) rotateY(' + rY.toFixed(3) + 'deg)';
 }
 
 function getInitialValues(callback) {
-	window.addEventListener('deviceorientation', function init(e) {
-		initialValues.gamma = e.gamma;
-		initialValues.beta = e.beta;
-		window.removeEventListener('deviceorientation', init);
-		if (callback) callback();
-	});
+    window.addEventListener('deviceorientation', function init(e) {
+        initialValues.gamma = e.gamma;
+        initialValues.beta = e.beta;
+        window.removeEventListener('deviceorientation', init);
+        if (callback) callback();
+    });
 }
 
 function Orient(el) {
-	console.log('orient');
-	elem = el;
-	getInitialValues();
-	return Orient;
+    console.log('orient');
+    elem = el;
+    getInitialValues();
+    return Orient;
 }
 
 Orient.listen = function() {
-	console.log('orient listen');
-	window.addEventListener('deviceorientation', handler);
-	Interpol.pipeline.add('orient', render);
-	return Orient;
+    console.log('orient listen');
+    window.addEventListener('deviceorientation', handler);
+    Interpol.pipeline.add('orient', render);
+    return Orient;
 };
 
 Orient.detach = function() {
-	window.removeEventListener('deviceorientation', handler);
-	Interpol.pipeline.remove('orient');
-	return Orient;
+    window.removeEventListener('deviceorientation', handler);
+    Interpol.pipeline.remove('orient');
+    return Orient;
 };
 
 Orient.reset = function(fn) {
-	getInitialValues(fn);
-	return Orient;
+    getInitialValues(fn);
+    return Orient;
 };
 
 
 module.exports = Orient;
-},{"../utilities":56,"interpol":2}],56:[function(require,module,exports){
+},{"../utilities":57,"interpol":2}],57:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Utilities
@@ -9080,13 +9296,25 @@ selector.windowHeight = (function() {
 })();
 
 /*
- *  selector.windowHeight - An IIFE to calculate the vendor specific string for CSS transforms.
+ *  selector.CSS_TRANSFORM - An IIFE to calculate the vendor specific string for CSS transforms.
  *
  *  @return {string} - The vendor specific string.
  */
 selector.CSS_TRANSFORM = (function() {
     var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
         return prefix === '' ? 'transform' : prefix + 'Transform';
+    });
+    return _getFirstSupported(arr);
+})();
+
+/*
+ *  selector.CSS_TRANSFORM_ORIGIN - An IIFE to calculate the vendor specific string for CSS transform origin.
+ *
+ *  @return {string} - The vendor specific string.
+ */
+selector.CSS_TRANSFORM_ORIGIN = (function() {
+    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
+        return prefix === '' ? 'transformOrigin' : prefix + 'TransformOrigin';
     });
     return _getFirstSupported(arr);
 })();
@@ -9251,6 +9479,74 @@ function rotateVector (v1, v2) {
         z: x1 * m2 + y1 * m6 + z1 * m10
     };
 }
+
+
+/*
+ *  Define some Custom Events which we can use anywhere in the project.
+ *  `tap`/`fastclick` - Removes the 300ms click delay for mobile.
+ *  `swipeleft`/`swiperight` - Detects a swipe on the X-axis.
+ *  `swipeup`/`swipedown` - Detects a swipe on the Y-axis.
+ */
+(function() {
+
+    if (!d.addEventListener) return;
+    
+    var createEvent = function(el, name) {
+        var e = d.createEvent('CustomEvent');
+        e.initCustomEvent(name, true, true, el.target);
+        if (!el.target.dispatchEvent(e)) e.preventDefault();
+        e = null;
+        return false;
+    };
+
+    var notMoved = true,
+        startPos = { x: 0, y: 0 },
+        endPos = { x: 0, y: 0},
+        prevTarget, prevTime,
+        evs = {
+            touchstart: function(e) {
+                startPos.x = e.touches[0].pageX;
+                startPos.y = e.touches[0].pageY;
+            },
+            touchmove: function(e) {
+                notMoved = false;
+                endPos.x = e.touches[0].pageX;
+                endPos.y = e.touches[0].pageY;
+            },
+            touchend: function(e) {
+                if (notMoved) {
+                    createEvent(e, 'fastclick');
+                    createEvent(e, 'tap');
+                    if (e.target === prevTarget) {
+                        var delta = Date.now() - prevTime;
+                        if (delta < 500) {
+                            createEvent(e, 'doubletap');
+                        }
+                    }
+                    prevTarget = e.target;
+                    prevTime = Date.now();
+                } else {
+                    var x = endPos.x - startPos.x,
+                        xr = Math.abs(x),
+                        y = endPos.y - startPos.y,
+                        yr = Math.abs(y);
+
+                    if (Math.max(xr, yr) > 20) {
+                        createEvent(e, xr > yr ? (x < 0 ? 'swipeleft' : 'swiperight') : (y < 0 ? 'swipeup' : 'swipedown'));
+                        notMoved = true;
+                    }
+                }
+            },
+            touchcancel: function(e) {
+                notMoved = false;
+            }
+        };
+
+    for (var e in evs) {
+        d.addEventListener(e, evs[e]);
+    }
+
+})();
 
 module.exports = selector;
 },{}]},{},[1]);
