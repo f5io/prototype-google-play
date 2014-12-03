@@ -18,17 +18,22 @@
   	-webkit-tap-highlight-color: transparent;
 }
 
-html, body {
+html, body, [role="container"] {
+	width: 100vw;
+	height: 100vh;
 	background: white;
 	padding: 0; margin: 0;
-	background: radial-gradient(ellipse at center, #ffffff 0%,#ccc 100%);
-	perspective: 550px;
+	background: radial-gradient(ellipse at center, #ffffff 25%,#ccc 100%);
 	overflow: hidden;
 	font-family: Georgia, serif;
 }
 
 a {
 	color: white;
+}
+
+[role="container"] {
+	perspective: 550px;
 }
 
 [role="background"] {
@@ -73,6 +78,7 @@ a {
 	left: 0; right: 0;
 	margin: auto;
 	transform: translate3d(0, 0, 750px);
+	pointer-events: none;
 }
 
 [role="loader"] {
@@ -309,8 +315,11 @@ a {
 	.fold {
 		position: absolute;
 		backface-visibility: hidden;
+		overflow: hidden;
 
 		img {
+			position: absolute;
+			top: 0; left: 0;
 			transform: translate3d(0, 0, 0);
 		}
 
@@ -333,6 +342,20 @@ a {
 	transform-style: preserve-3d;
 }
 
+.cube-shadow {
+	position: absolute;
+	top: 0; bottom: 0;
+	left: 0; right: 0;
+	margin: auto;
+	//transform-style: preserve-3d;
+	transform-origin: 50% 50%;
+	background: rgba(black, 1);
+	box-shadow: 0 0 30px 10px rgba(black, 1);
+	background-blend-mode: multiply;
+	//border-radius: 25px;
+	z-index: 1;
+}
+
 .cube {
 	// overflow: hidden;
 	position: absolute;
@@ -343,16 +366,18 @@ a {
 	transform-style: preserve-3d;
 	display: inline-block;
 	margin: auto;
+	z-index: 5;
 
 	&.disabled {
 		pointer-events: none;
 	}
 
 	.side {
-		backface-visibility: visible;
+		backface-visibility: hidden;
 		background: white;
 		position: absolute;
 		transform-style: preserve-3d;
+		overflow: hidden;
 
 		.vid {
 			width: 125px;

@@ -3,7 +3,7 @@
  * Google Ad Prototype 2014
  * @author: Joe Harlow
  *
- * All code (except libs) (c) Copyright 2014 - Essence Digital. Please do not reproduce.
+ * All code (except libs) (c) Copyright 2014 - Joe Harlow / Essence Digital. Please do not reproduce.
  */
 
 /* General Utilities */
@@ -12,6 +12,7 @@ var $ = require('./modules/utilities'); // THIS IS NOT JQUERY
 /* Import our modules */
 var Config = require('./modules/config');
 var Cube = require('./modules/cube');
+var Shadow = require('./modules/cube/shadow');
 var Orient = require('./modules/orient');
 var Messaging = require('./modules/messaging');
 var Background = require('./modules/background');
@@ -22,55 +23,41 @@ var Debug = require('./modules/debug');
 var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
 
-/* DOM Ready Event Handler */
-$.ready(function() {
+function init() {
+
+    /* Constants */
+    var CUBE_WIDTH = $.windowWidth(),//250,
+        HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
+        CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50;
 
     /* Cache the views */
-    var mainView = $('[role="main"]')[0],
+    var containerView = $('[role="container"]')[0],
+        lightView = $('[role="light"]')[0],
+        mainView = $('[role="main"]')[0],
         cubeView = $('[role="cube"]')[0],
         loadView = $('[role="loader"]')[0],
         bgView = $('[role="background"]')[0];
+
+    containerView.style[$.CSS_PERSPECTIVE] = CONTAINER_PERSPECTIVE + 'px';
+
+    var pre = Config.global.isCeltra ? 'http://labs.f5.io/essence/' : '';
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
-        'assets/sound/click.mp3',
-        'assets/img/playlogo-sml.png',
-        'assets/img/cubes/main/side1.jpg',
-        'assets/img/cubes/main/side2.jpg',
-        'assets/img/cubes/main/side3.jpg',
-        'assets/img/cubes/main/side4.jpg',
-        'assets/img/cubes/main/side5.jpg',
-        'assets/img/cubes/main/side6.jpg',
-        'assets/img/cubes/cube01/side1.jpg',
-        'assets/img/cubes/cube01/side2.jpg',
-        'assets/img/cubes/cube01/side3.jpg',
-        'assets/img/cubes/cube01/side4.jpg',
-        'assets/img/cubes/cube01/side5.jpg',
-        'assets/img/cubes/cube01/side6.jpg',
-        'assets/img/cubes/cube02/side1.jpg',
-        'assets/img/cubes/cube02/side2.jpg',
-        'assets/img/cubes/cube02/side3.jpg',
-        'assets/img/cubes/cube02/side4.jpg',
-        'assets/img/cubes/cube02/side5.jpg',
-        'assets/img/cubes/cube02/side6.jpg',
-        'assets/img/cubes/cube03/side1.jpg',
-        'assets/img/cubes/cube03/side2.jpg',
-        'assets/img/cubes/cube03/side3.jpg',
-        'assets/img/cubes/cube03/side4.jpg',
-        'assets/img/cubes/cube03/side5.jpg',
-        'assets/img/cubes/cube03/side6.jpg',
-        'assets/img/cubes/cube04/side1.jpg',
-        'assets/img/cubes/cube04/side2.jpg',
-        'assets/img/cubes/cube04/side3.jpg',
-        'assets/img/cubes/cube04/side4.jpg',
-        'assets/img/cubes/cube04/side5.jpg',
-        'assets/img/cubes/cube04/side6.jpg'
+        pre + 'assets/sound/click.mp3',
+        pre + 'assets/img/playlogo-sml.png',
+        pre + 'assets/img/cubes/main/side1.jpg',
+        pre + 'assets/img/cubes/main/side2.jpg',
+        pre + 'assets/img/cubes/main/side3.jpg',
+        pre + 'assets/img/cubes/main/side4.jpg',
+        pre + 'assets/img/cubes/main/side5.jpg',
+        pre + 'assets/img/cubes/main/side6.jpg'
     ]).preload().then(function() {
 
         loadView.className = 'off';
 
         /* All assets are preloaded */
-        var cubes = {},
+        var cubes = {}, shadow,
             bigcube, bigrot;
             
         /* Initialise the Debug Panel */
@@ -129,6 +116,9 @@ $.ready(function() {
                 return cube.config.normaliseFacialRotation;
             });
 
+            /* Hide the Light view so it doesn't interfere */
+            lightView.style.display = 'none';
+
             /* Get the current visible faces */
             var faces = cbs.map(function(cube, i) {
                 var el = cube.element;
@@ -144,6 +134,9 @@ $.ready(function() {
 
                 return { face: face, cube: cube };
             });
+
+            /* Show the Light view */
+            lightView.style.display = 'block';
 
             var sameRot = false, sameFaceRot = false;
 
@@ -219,26 +212,31 @@ $.ready(function() {
          *  and passes their configs into the Debug panel.
          */
         function initialiseFourCubes() {
-
             var configs = [];
             for (var i = 0; i < 4; i++) {
                 var cubeContainer = $.getElement('div', 'cube-container', {}, {});
                 cubeView.appendChild(cubeContainer);
                 var cube = Object.create(Cube);
-                cube.init(125, 125, i, 'cube0' + (i + 1), cubeContainer);
+                /* Use `cropLargeFaces` to remove the need for other assets */
+                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, { cropLargeFaces: true, castShadow: false });
                 cubes[cube.id] = cube;
-                cube.element.style.left = $.isOdd(i + 1) ? '-125px' : '125px';
-                cube.element.style.top = i < 2 ? '-125px' : '125px';
-                if (Config.global.useGamification) {
-                    cube.rotation.X = $.getRandomRotation([0, 180]);
-                    cube.rotation.Y = $.getRandomRotation([90, 270]);
-                    cube.rotation.Z = $.getRandomRotation();
-                    cube.render();
-                    if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
-                }
-                animateCubeIn(cubeContainer, i);
+                cube.element.style.left = $.isOdd(i + 1) ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
+                cube.element.style.top = i < 2 ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
+
+                cube.rotation.X = $.getRandomRotation([0, 180]);
+                cube.rotation.Y = $.getRandomRotation([90, 270]);
+                cube.rotation.Z = $.getRandomRotation();
+                cube.render();
+                if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
+
+                animateCubeIn(cube, i);
                 configs.push(cube);
             }
+
+            shadow = Object.create(Shadow);
+            shadow.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'shadow', cubeView);
+            shadow.render();
+            animateShadowIn();
 
             Debug.defineCubeProperties(configs);
         }
@@ -251,7 +249,7 @@ $.ready(function() {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
-            bigcube.init(250, 250, 0, 'main', cubeContainer, {
+            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'main', cubeContainer, {
                 useInertia: true,
                 useBackgrounds: true,
                 useContent: false,
@@ -275,12 +273,13 @@ $.ready(function() {
 
         /*
          *  animateCubeIn [private] - Animate the cube in from outside of the screen.
-         *  @param {container} - A Cube containing HTML Element.
+         *  @param {cube} - A Cube.
          *  @param {index} - The index of the Cube for sequential animation.
          */
-        function animateCubeIn(container, index) {
+        function animateCubeIn(cube, index) {
+            var container = cube.target;
 
-            var from = -($.windowHeight() * 0.8),
+            var from = -$.windowHeight(),
                 to = 0;
 
             container.style[$.CSS_TRANSFORM] += ' translateY(' + from + 'px)';
@@ -298,9 +297,41 @@ $.ready(function() {
                 .start();
         }
 
+        /*
+         *  animateShadowIn [private] - Animate the shadow in from a scale and opacity of 0.
+         */
+        function animateShadowIn(cube, index) {
+            shadow.scale.X = shadow.scale.Y = shadow.opacity = 0;
+
+            var from = 0,
+                to = 1;
+
+            Interpol.tween()
+                .duration(400)
+                .from(from)
+                .to(to)
+                .ease(Interpol.easing.easeOutBack)
+                .step(function(val) {
+                    shadow.scale.X = shadow.scale.Y = val;
+                    shadow.opacity = val / 10;
+                    shadow.render();
+                })
+                .start();
+        }
+
         /* Let's prevent the horrible over scroll on mobile devices */
         document.addEventListener('touchmove', $.prevent);
 
     });
 
-});
+}
+
+/* If we are inside Celtra we should have all this guff */
+if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
+    /* Expose the init function on the window for calling within Celtra */
+    Config.global.isCeltra = true;
+    window.InitCube = init;
+} else {
+    /* DOM Ready Event Handler */
+    $.ready(init);
+}

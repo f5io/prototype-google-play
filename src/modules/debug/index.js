@@ -13,7 +13,7 @@ function init() {
 
     var closeBtn = document.createElement('div');
     closeBtn.className = 'close';
-    closeBtn.addEventListener('click', function() {
+    closeBtn.addEventListener('tap', function() {
         target.classList.add('hidden');
         document.addEventListener('touchmove', $.prevent);
         $.emitter.emit('debug_panel', false);
@@ -22,7 +22,7 @@ function init() {
     var openBtn = document.createElement('div');
     openBtn.className = 'open';
     openBtn.innerHTML = '<span></span>';
-    openBtn.addEventListener('click', function() {
+    openBtn.addEventListener('tap', function() {
         target.classList.remove('hidden');
         document.removeEventListener('touchmove', $.prevent);
         $.emitter.emit('debug_panel', true);

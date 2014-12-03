@@ -4,7 +4,7 @@
  * Google Ad Prototype 2014
  * @author: Joe Harlow
  *
- * All code (except libs) (c) Copyright 2014 - Essence Digital. Please do not reproduce.
+ * All code (except libs) (c) Copyright 2014 - Joe Harlow / Essence Digital. Please do not reproduce.
  */
 
 /* General Utilities */
@@ -13,6 +13,7 @@ var $ = require('./modules/utilities'); // THIS IS NOT JQUERY
 /* Import our modules */
 var Config = require('./modules/config');
 var Cube = require('./modules/cube');
+var Shadow = require('./modules/cube/shadow');
 var Orient = require('./modules/orient');
 var Messaging = require('./modules/messaging');
 var Background = require('./modules/background');
@@ -23,55 +24,41 @@ var Debug = require('./modules/debug');
 var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
 
-/* DOM Ready Event Handler */
-$.ready(function() {
+function init() {
+
+    /* Constants */
+    var CUBE_WIDTH = $.windowWidth(),//250,
+        HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
+        CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50;
 
     /* Cache the views */
-    var mainView = $('[role="main"]')[0],
+    var containerView = $('[role="container"]')[0],
+        lightView = $('[role="light"]')[0],
+        mainView = $('[role="main"]')[0],
         cubeView = $('[role="cube"]')[0],
         loadView = $('[role="loader"]')[0],
         bgView = $('[role="background"]')[0];
+
+    containerView.style[$.CSS_PERSPECTIVE] = CONTAINER_PERSPECTIVE + 'px';
+
+    var pre = Config.global.isCeltra ? 'http://labs.f5.io/essence/' : '';
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
-        'assets/sound/click.mp3',
-        'assets/img/playlogo-sml.png',
-        'assets/img/cubes/main/side1.jpg',
-        'assets/img/cubes/main/side2.jpg',
-        'assets/img/cubes/main/side3.jpg',
-        'assets/img/cubes/main/side4.jpg',
-        'assets/img/cubes/main/side5.jpg',
-        'assets/img/cubes/main/side6.jpg',
-        'assets/img/cubes/cube01/side1.jpg',
-        'assets/img/cubes/cube01/side2.jpg',
-        'assets/img/cubes/cube01/side3.jpg',
-        'assets/img/cubes/cube01/side4.jpg',
-        'assets/img/cubes/cube01/side5.jpg',
-        'assets/img/cubes/cube01/side6.jpg',
-        'assets/img/cubes/cube02/side1.jpg',
-        'assets/img/cubes/cube02/side2.jpg',
-        'assets/img/cubes/cube02/side3.jpg',
-        'assets/img/cubes/cube02/side4.jpg',
-        'assets/img/cubes/cube02/side5.jpg',
-        'assets/img/cubes/cube02/side6.jpg',
-        'assets/img/cubes/cube03/side1.jpg',
-        'assets/img/cubes/cube03/side2.jpg',
-        'assets/img/cubes/cube03/side3.jpg',
-        'assets/img/cubes/cube03/side4.jpg',
-        'assets/img/cubes/cube03/side5.jpg',
-        'assets/img/cubes/cube03/side6.jpg',
-        'assets/img/cubes/cube04/side1.jpg',
-        'assets/img/cubes/cube04/side2.jpg',
-        'assets/img/cubes/cube04/side3.jpg',
-        'assets/img/cubes/cube04/side4.jpg',
-        'assets/img/cubes/cube04/side5.jpg',
-        'assets/img/cubes/cube04/side6.jpg'
+        pre + 'assets/sound/click.mp3',
+        pre + 'assets/img/playlogo-sml.png',
+        pre + 'assets/img/cubes/main/side1.jpg',
+        pre + 'assets/img/cubes/main/side2.jpg',
+        pre + 'assets/img/cubes/main/side3.jpg',
+        pre + 'assets/img/cubes/main/side4.jpg',
+        pre + 'assets/img/cubes/main/side5.jpg',
+        pre + 'assets/img/cubes/main/side6.jpg'
     ]).preload().then(function() {
 
         loadView.className = 'off';
 
         /* All assets are preloaded */
-        var cubes = {},
+        var cubes = {}, shadow,
             bigcube, bigrot;
             
         /* Initialise the Debug Panel */
@@ -130,6 +117,9 @@ $.ready(function() {
                 return cube.config.normaliseFacialRotation;
             });
 
+            /* Hide the Light view so it doesn't interfere */
+            lightView.style.display = 'none';
+
             /* Get the current visible faces */
             var faces = cbs.map(function(cube, i) {
                 var el = cube.element;
@@ -145,6 +135,9 @@ $.ready(function() {
 
                 return { face: face, cube: cube };
             });
+
+            /* Show the Light view */
+            lightView.style.display = 'block';
 
             var sameRot = false, sameFaceRot = false;
 
@@ -220,26 +213,31 @@ $.ready(function() {
          *  and passes their configs into the Debug panel.
          */
         function initialiseFourCubes() {
-
             var configs = [];
             for (var i = 0; i < 4; i++) {
                 var cubeContainer = $.getElement('div', 'cube-container', {}, {});
                 cubeView.appendChild(cubeContainer);
                 var cube = Object.create(Cube);
-                cube.init(125, 125, i, 'cube0' + (i + 1), cubeContainer);
+                /* Use `cropLargeFaces` to remove the need for other assets */
+                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, { cropLargeFaces: true, castShadow: false });
                 cubes[cube.id] = cube;
-                cube.element.style.left = $.isOdd(i + 1) ? '-125px' : '125px';
-                cube.element.style.top = i < 2 ? '-125px' : '125px';
-                if (Config.global.useGamification) {
-                    cube.rotation.X = $.getRandomRotation([0, 180]);
-                    cube.rotation.Y = $.getRandomRotation([90, 270]);
-                    cube.rotation.Z = $.getRandomRotation();
-                    cube.render();
-                    if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
-                }
-                animateCubeIn(cubeContainer, i);
+                cube.element.style.left = $.isOdd(i + 1) ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
+                cube.element.style.top = i < 2 ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
+
+                cube.rotation.X = $.getRandomRotation([0, 180]);
+                cube.rotation.Y = $.getRandomRotation([90, 270]);
+                cube.rotation.Z = $.getRandomRotation();
+                cube.render();
+                if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
+
+                animateCubeIn(cube, i);
                 configs.push(cube);
             }
+
+            shadow = Object.create(Shadow);
+            shadow.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'shadow', cubeView);
+            shadow.render();
+            animateShadowIn();
 
             Debug.defineCubeProperties(configs);
         }
@@ -252,7 +250,7 @@ $.ready(function() {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
-            bigcube.init(250, 250, 0, 'main', cubeContainer, {
+            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'main', cubeContainer, {
                 useInertia: true,
                 useBackgrounds: true,
                 useContent: false,
@@ -276,12 +274,13 @@ $.ready(function() {
 
         /*
          *  animateCubeIn [private] - Animate the cube in from outside of the screen.
-         *  @param {container} - A Cube containing HTML Element.
+         *  @param {cube} - A Cube.
          *  @param {index} - The index of the Cube for sequential animation.
          */
-        function animateCubeIn(container, index) {
+        function animateCubeIn(cube, index) {
+            var container = cube.target;
 
-            var from = -($.windowHeight() * 0.8),
+            var from = -$.windowHeight(),
                 to = 0;
 
             container.style[$.CSS_TRANSFORM] += ' translateY(' + from + 'px)';
@@ -299,13 +298,46 @@ $.ready(function() {
                 .start();
         }
 
+        /*
+         *  animateShadowIn [private] - Animate the shadow in from a scale and opacity of 0.
+         */
+        function animateShadowIn(cube, index) {
+            shadow.scale.X = shadow.scale.Y = shadow.opacity = 0;
+
+            var from = 0,
+                to = 1;
+
+            Interpol.tween()
+                .duration(400)
+                .from(from)
+                .to(to)
+                .ease(Interpol.easing.easeOutBack)
+                .step(function(val) {
+                    shadow.scale.X = shadow.scale.Y = val;
+                    shadow.opacity = val / 10;
+                    shadow.render();
+                })
+                .start();
+        }
+
         /* Let's prevent the horrible over scroll on mobile devices */
         document.addEventListener('touchmove', $.prevent);
 
     });
 
-});
-},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":51,"./modules/debug":54,"./modules/messaging":55,"./modules/orient":56,"./modules/utilities":57,"interpol":2,"stats":3}],2:[function(require,module,exports){
+}
+
+/* If we are inside Celtra we should have all this guff */
+if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
+    /* Expose the init function on the window for calling within Celtra */
+    Config.global.isCeltra = true;
+    window.InitCube = init;
+} else {
+    /* DOM Ready Event Handler */
+    $.ready(init);
+}
+
+},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":51,"./modules/cube/shadow":53,"./modules/debug":55,"./modules/messaging":56,"./modules/orient":57,"./modules/utilities":58,"interpol":2,"stats":3}],2:[function(require,module,exports){
 (function (global){
 ;__browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 (function(factory) {
@@ -6448,7 +6480,7 @@ var Promise = require('bluebird'); // https://github.com/petkaantonov/bluebird
 var assets = [],
     buffers = {},
     imageRegex = /\.(gif|jpeg|jpg|png)$/,
-    soundRegex = /\.(mp3|ogg)$/;
+    soundRegex = /\.(mp3|mp4|ogg)$/;
 
 var sounds, images;
 
@@ -6788,7 +6820,7 @@ Background.remove = function() {
 };
 
 module.exports = Background;
-},{"../assetmanager":41,"../config":46,"../utilities":57,"interpol":2}],46:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"interpol":2}],46:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Configuration
@@ -6802,7 +6834,7 @@ var $ = require('./utilities');
 var global = {};
 
 /* Let's define some global configuration options that will emit an event when they are set */
-['displayMetrics', 'useSound', 'useAccelerometer', 'useGamification', 'useDynamicLighting', 'useBackgroundAnimation', 'useMessaging'].forEach(function(key) {
+['displayMetrics', 'useSound', 'useAccelerometer', 'useGamification', 'useDynamicLighting', 'useBackgroundAnimation', 'useMessaging', 'isCeltra'].forEach(function(key) {
     var val = false;
     Object.defineProperty(global, key, {
         enumerable: true,
@@ -6825,11 +6857,13 @@ global.useDynamicLighting = true;
 
 /* Individual cube specific configuration variables */
 var cube = {
+    castShadow: true,
     useInertia: false,
     useBackgrounds: true,
     useContent: false,
     useVideo: false,
     useGif: false,
+    cropLargeFaces: false,
     isSequential: false,
     normaliseFacialRotation: true
 };
@@ -6848,8 +6882,11 @@ var titles = {
     useContent: 'Face Content',
     useVideo: 'Video Face Content',
     useGif: 'GIF Face Content',
+    cropLargeFaces: 'Crop Full Face Assets',
     isSequential: 'Sequential Interaction',
-    normaliseFacialRotation: 'Normalise Face Rotation'
+    normaliseFacialRotation: 'Normalise Face Rotation',
+    isCeltra: 'Celtra Platform',
+    castShadow: 'Cast Shadow'
 };
 
 /* Configuration options descriptions */
@@ -6866,8 +6903,11 @@ var descriptions = {
     useContent: 'Show content on the cube faces.',
     useVideo: 'Show a video on one face of the cube.',
     useGif: 'Show a GIF on one face of the cube.',
+    cropLargeFaces: 'Use the full face assets on the gamified cube to reduce ad weight.',
     isSequential: 'Always display the next face of the cube no matter which way it turns.',
-    normaliseFacialRotation: 'Always display cube faces at the correct orientation.'
+    normaliseFacialRotation: 'Always display cube faces at the correct orientation.',
+    isCeltra: 'Will be green if we are in Celtra.',
+    castShadow: 'Cast a shadow underneath the cube.'
 };
 
 /* Let's expose these objects */
@@ -6877,7 +6917,7 @@ module.exports = {
     titles: titles,
     descriptions: descriptions
 };
-},{"./utilities":57}],47:[function(require,module,exports){
+},{"./utilities":58}],47:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Component Base Class
@@ -6942,7 +6982,7 @@ var Common = {
 };
 
 module.exports = Common;
-},{"../utilities":57}],48:[function(require,module,exports){
+},{"../utilities":58}],48:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Content Matrix
@@ -7057,7 +7097,7 @@ var content = {
 };
 
 module.exports = content;
-},{"../../config":46,"../../messaging":55,"../../utilities":57}],49:[function(require,module,exports){
+},{"../../config":46,"../../messaging":56,"../../utilities":58}],49:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Face Class
@@ -7130,10 +7170,19 @@ Face.populateElement = function(elem) {
     
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
-        var url = $.format(content.background, { i: this.index + 1, name: this.name });
+        var name = this.parent.config.cropLargeFaces ? 'main' : this.name;
+        var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+        var url = $.format(str, { i: this.index + 1, name: name });
         img.src = AssetManager.get(url).uri();
         img.width = this.width;
         img.height = this.height;
+        
+        if (this.parent.config.cropLargeFaces) {
+            img.width *= 2;
+            img.height *= 2;
+            img.style.left = $.isOdd(this.parent.index) ? -this.width + 'px' : 0;
+            img.style.top = this.parent.index < 2 ? 0 : -this.height + 'px';
+        }
 
         elem.appendChild(img);
     }
@@ -7197,8 +7246,9 @@ Face.render = function() {
 module.exports = Face;
 
 
-},{"../assetmanager":41,"../config":46,"../utilities":57,"./common":47,"./content":48}],50:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./common":47,"./content":48}],50:[function(require,module,exports){
 var $ = require('../utilities');
+var content = require('./content');
 var Config = require('../config');
 var Vect3 = require('./vect3');
 var AssetManager = require('../assetmanager');
@@ -7215,6 +7265,7 @@ var Fold = {
         this.faceIndex = faceIndex;
         this.cubeIndex = cube.index;
         this.cubeRotation = cube.rotation;
+        this.cube = cube;
         this.folds = [];
 
         var styles = {
@@ -7253,10 +7304,21 @@ var Fold = {
                 var fold = $.getElement('div', 'fold', {}, styles);
 
                 var img = new Image();
-                var src = 'assets/img/cubes/cube0' + (i + 1) + '/side' + (this.faceIndex + 1) + '.jpg';
+                var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+                var dict = { i : this.faceIndex + 1 };
+                dict.name = this.cube.config.cropLargeFaces ? 'main' : 'cube0' + (i + 1);
+                var src = $.format(str, dict);
+
                 img.src = AssetManager.get(src).uri();
                 img.width = this.width;
                 img.height = this.height;
+
+                if (this.cube.config.cropLargeFaces) {
+                    img.width *= 2;
+                    img.height *= 2;
+                    img.style.left = $.isOdd(i + 1) ? 0 : -this.width + 'px';
+                    img.style.top = i < 2 ? 0 : -this.height + 'px';
+                }
 
                 fold.appendChild(img);
 
@@ -7336,7 +7398,7 @@ var Fold = {
 };
 
 module.exports = Fold;
-},{"../assetmanager":41,"../config":46,"../utilities":57,"./vect3":53,"interpol":2}],51:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./content":48,"./vect3":54,"interpol":2}],51:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Class
@@ -7351,6 +7413,7 @@ var $ = require('../utilities');
 var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
+var Shadow = require('./shadow');
 var Fold = require('./fold');
 var Config = require('../config');
 var Interpol = require('interpol');
@@ -7389,12 +7452,20 @@ Cube.init = function(width, height, index, name, target, config) {
     this.config = $.extend({}, Config.cube, config);
     
     /* Get the `click.mp3` sound from the AssetManager */
-    this.sound = AssetManager.get('assets/sound/click.mp3');
+    var soundUrl = 'assets/sound/click.mp3';
+    soundUrl = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + soundUrl : soundUrl;
+    this.sound = AssetManager.get(soundUrl);
     
     this.currentContent = 0;
     this.nextFaceIndex = 0;
     this.faces = [];
     this.faceData = [];
+
+    /* If the cube is set to cast a shadow, create the shadow and init */
+    this.shadow = Object.create(Shadow);
+    this.shadow.init(this.width, this.height, this.index, this.name, this.target.parentNode, this);
+    this.shadow.opacity = this.config.castShadow ? this.shadow.opacity : 0;
+    this.shadow.render();
     
     /* Select the `light` from DOM */
     this.light = $('[role="light"]')[0];
@@ -7464,11 +7535,13 @@ Cube.init = function(width, height, index, name, target, config) {
     this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
     this.element.addEventListener('touchstart', touchStart);
 
-    this.element.addEventListener('doubletap', function(e) {
-        var face = getFaceFromTarget(e.target);
-        var fold = Object.create(Fold);
-        fold.init(_self, face.index);
-    });
+    if (Config.global.useGamification) {
+        this.element.addEventListener('doubletap', function(e) {
+            var face = getFaceFromTarget(e.target);
+            var fold = Object.create(Fold);
+            fold.init(_self, face.index);
+        });
+    }
 
     /* Expose private functions as public on the Cube */
     this.getFaceFromTarget = getFaceFromTarget;
@@ -7605,8 +7678,6 @@ Cube.init = function(width, height, index, name, target, config) {
                 };
 
                 touchEnd($.extend({}, e, { onAnimComplete: onAnimComplete }));
-                // $.emitter.emit(id, $.extend({}, e, { target: elem }));
-                // touchEnd(e);
                 return;
             }
         } else if (!_self.config.useInertia) {
@@ -7665,6 +7736,21 @@ Cube.init = function(width, height, index, name, target, config) {
                 if (nNearest !== oNearest && Config.global.useSound) _self.sound.play();
                 _self.rotation[axis] = newRot;
                 _self.render();
+
+
+                if (!_self.config.castShadow) return;
+                if (direction === 'leftright') {
+                    _self.shadow.rotation.Z = determineCalculation(newRot);
+                    _self.shadow.render();
+                } else if (direction === 'updown') {
+                    var rotVal = Math.abs(newRot - nNearest) / 45;
+                    var scaleVal = 1 + ((rotVal * _self.shadow.hypRatio) / 2);
+                    var currentRot = Math.abs(_self.shadow.rotation.Z);
+                    _self.shadow.scale.X = (currentRot === 90 || currentRot === 270 ? scaleVal : 1);
+                    _self.shadow.scale.Y = (currentRot === 0 || currentRot === 180 ? scaleVal : 1);
+                    // _self.shadow.opacity = 0.1 * (scaleVal * 1.5);
+                    _self.shadow.render();
+                }
             });
         }
     }
@@ -7766,6 +7852,21 @@ Cube.init = function(width, height, index, name, target, config) {
                 _self.render();
                 oldV = val;
 
+                if (_self.config.castShadow) {
+                    if (direction === 'leftright') {
+                        _self.shadow.rotation.Z = determineCalculation(val);
+                        _self.shadow.render();
+                    } else if (direction === 'updown') {
+                        var rotVal = Math.abs(val - nNearest) / 45;
+                        var scaleVal = 1 + ((rotVal * _self.shadow.hypRatio) / 2);
+                        var currentRot = Math.abs(_self.shadow.rotation.Z);
+                        _self.shadow.scale.X = (currentRot === 90 || currentRot === 270 ? scaleVal : 1);
+                        _self.shadow.scale.Y = (currentRot === 0 || currentRot === 180 ? scaleVal : 1);
+                        // _self.shadow.opacity = 0.1 * (scaleVal * 1.5);
+                        _self.shadow.render();
+                    }
+                }
+                
                 /*
                  * Check if this touchEnd has been fired because we moved over a different
                  * cube. If we are less than 10 degrees away from our target rotation, begin
@@ -7780,8 +7881,21 @@ Cube.init = function(width, height, index, name, target, config) {
                 }
             })
             .complete(function complete(val) {
-                _self.rotation[axis] = $.norm($.nearest(val, 90) % 360);
+                var endVal = $.norm($.nearest(val, 90) % 360);
+                _self.rotation[axis] = endVal;
                 _self.render();
+
+                if (_self.config.castShadow) {
+                    if (direction === 'leftright') {
+                        _self.shadow.rotation.Z = determineCalculation(endVal);
+                        _self.shadow.render();
+                    } else if (direction === 'updown') {
+                        _self.shadow.scale.X = _self.shadow.scale.Y = 1;
+                        // _self.shadow.opacity = 0.1;
+                        _self.shadow.render();
+                    }
+                }
+
                 dispatchRotationComplete();
                 if (_self.config.isSequential) {
                     _self.element.addEventListener('touchstart', touchStart);
@@ -7952,7 +8066,7 @@ Cube.render = function() {
 };
 
 module.exports = Cube;
-},{"../assetmanager":41,"../config":46,"../utilities":57,"./common":47,"./face":49,"./fold":50,"./matrix":52,"./vect3":53,"interpol":2}],52:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./common":47,"./face":49,"./fold":50,"./matrix":52,"./shadow":53,"./vect3":54,"interpol":2}],52:[function(require,module,exports){
 module.exports={
     "0" : {
         "0" : {
@@ -8594,6 +8708,77 @@ module.exports={
 },{}],53:[function(require,module,exports){
 /*
  *
+ * Google Ad Prototype 2014 - Shadow Class
+ * @author: Joe Harlow
+ *
+ */
+
+/* General Utilities */
+var $ = require('../utilities');
+
+/* Import modules */
+var Common = require('./common');
+var Config = require('../config');
+
+/* Inherit from the Cube Component Base Class */
+var Shadow = Object.create(Common);
+
+/*
+ *  Shadow.init - Override `init` on the Base Class.
+ *  @param {width} - A number for the width of the component.
+ *  @param {height} - A number for the height of the component.
+ *  @param {index} - A number for the index of the component.
+ *  @param {name} - A string to of the name of the component.
+ *  @param {target} - An HTML Element where the component will be appended.
+ *  @param {parent} - The Shadow's parent `Cube`.
+ */
+Shadow.init = function(width, height, index, name, target, parent) {
+    this.parent = parent;
+    this.scale = { X : 1, Y : 1 };
+    this.opacity = 0.1;
+
+    /* `super` the Base Class */
+    Common.init.apply(this, arguments);
+
+    this.rotation.X = 90;
+    this.translate.Z = -(this.height * 0.8);
+
+    this.hypotenuse = Math.sqrt((this.width * this.width) + (this.height * this.height));
+    this.hypRatio = (this.hypotenuse / this.width) - 1;
+};
+
+/*
+ *  Shadow.getElement - Override `getElement` on the Base Class.
+ *
+ *  @return {HTMLElement} - A HTML Element.
+ */
+Shadow.getElement = function() {
+	var ratio = 1.5;
+	var borderRadius = '25px';
+
+    return $.getElement('div', 'cube-shadow', {}, {
+		width : this.width / ratio + 'px',
+		height : this.height / ratio + 'px',
+		borderRadius : borderRadius
+	});
+};
+
+/*
+ *  Shadow.render - Override `render` on the Base Class.
+ */
+Shadow.render = function() {
+    /* `super` the Base Class */
+    Common.render.apply(this);
+
+    /* Append scale to the end of the transform string */
+    this.element.style[$.CSS_TRANSFORM] += ' scale(' + this.scale.X + ',' + this.scale.Y + ')';
+    this.element.style.opacity = this.opacity;
+};
+
+module.exports = Shadow;
+},{"../config":46,"../utilities":58,"./common":47}],54:[function(require,module,exports){
+/*
+ *
  * Google Ad Prototype 2014 - Vector3 Mathematics
  * @author: Keith Clark
  *
@@ -8683,7 +8868,7 @@ var Vect3 = {
 };
 
 module.exports = Vect3;
-},{}],54:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 var $ = require('../utilities');
 var Config = require('../config');
 var Stats = require('stats');
@@ -8699,7 +8884,7 @@ function init() {
 
     var closeBtn = document.createElement('div');
     closeBtn.className = 'close';
-    closeBtn.addEventListener('click', function() {
+    closeBtn.addEventListener('tap', function() {
         target.classList.add('hidden');
         document.addEventListener('touchmove', $.prevent);
         $.emitter.emit('debug_panel', false);
@@ -8708,7 +8893,7 @@ function init() {
     var openBtn = document.createElement('div');
     openBtn.className = 'open';
     openBtn.innerHTML = '<span></span>';
-    openBtn.addEventListener('click', function() {
+    openBtn.addEventListener('tap', function() {
         target.classList.remove('hidden');
         document.removeEventListener('touchmove', $.prevent);
         $.emitter.emit('debug_panel', true);
@@ -8885,7 +9070,7 @@ module.exports = {
     init: init,
     defineCubeProperties: defineCubeProperties
 };
-},{"../config":46,"../utilities":57,"interpol":2,"stats":3}],55:[function(require,module,exports){
+},{"../config":46,"../utilities":58,"interpol":2,"stats":3}],56:[function(require,module,exports){
 var parentWindow,
     parentOrigin;
 
@@ -8912,7 +9097,7 @@ var Messaging = {
 };
 
 module.exports = Messaging;
-},{}],56:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 var $ = require('../utilities');
 var Interpol = require('interpol');
 var initialValues = { gamma: 0, beta: 0 };
@@ -8982,7 +9167,7 @@ Orient.reset = function(fn) {
 
 
 module.exports = Orient;
-},{"../utilities":57,"interpol":2}],57:[function(require,module,exports){
+},{"../utilities":58,"interpol":2}],58:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Utilities
@@ -9007,6 +9192,20 @@ function _getFirstSupported(arr) {
     });
 
     return ven;
+}
+
+/*
+ *  prefixProperty [private] - Calculates the vendor specific string for the supplied CSS property.
+ *  @param {prop} - The property string
+ *
+ *  @return {string} - The vendor specific string.
+ */
+function prefixProperty(prop) {
+    var propCap = prop.charAt(0).toUpperCase() + prop.substring(1);
+    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
+        return prefix === '' ? prop : prefix + propCap;
+    });
+    return _getFirstSupported(arr);
 }
 
 /*
@@ -9170,7 +9369,7 @@ selector.isOdd = function(num) {
  *  @return {boolean} - Whether the value is defined or not.
  */
 selector.isDefined = function(val) {
-    return typeof val !== 'undefined';
+    return val !== void 0;
 };
 
 /*
@@ -9296,28 +9495,19 @@ selector.windowHeight = (function() {
 })();
 
 /*
- *  selector.CSS_TRANSFORM - An IIFE to calculate the vendor specific string for CSS transforms.
- *
- *  @return {string} - The vendor specific string.
+ *  selector.CSS_TRANSFORM - The vendor specific string for CSS transforms.
  */
-selector.CSS_TRANSFORM = (function() {
-    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
-        return prefix === '' ? 'transform' : prefix + 'Transform';
-    });
-    return _getFirstSupported(arr);
-})();
+selector.CSS_TRANSFORM = prefixProperty('transform');
 
 /*
- *  selector.CSS_TRANSFORM_ORIGIN - An IIFE to calculate the vendor specific string for CSS transform origin.
- *
- *  @return {string} - The vendor specific string.
+ *  selector.CSS_TRANSFORM_ORIGIN - The vendor specific string for CSS transform origin.
  */
-selector.CSS_TRANSFORM_ORIGIN = (function() {
-    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
-        return prefix === '' ? 'transformOrigin' : prefix + 'TransformOrigin';
-    });
-    return _getFirstSupported(arr);
-})();
+selector.CSS_TRANSFORM_ORIGIN = prefixProperty('transformOrigin');
+
+/*
+ *  selector.CSS_PERSPECTIVE - The vendor specific string for CSS perspective.
+ */
+selector.CSS_PERSPECTIVE = prefixProperty('perspective');
 
 /*
  *  selector.computeVertexData - Take an element and return the A, B, C and D vertices.

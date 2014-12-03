@@ -70,10 +70,19 @@ Face.populateElement = function(elem) {
     
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
-        var url = $.format(content.background, { i: this.index + 1, name: this.name });
+        var name = this.parent.config.cropLargeFaces ? 'main' : this.name;
+        var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+        var url = $.format(str, { i: this.index + 1, name: name });
         img.src = AssetManager.get(url).uri();
         img.width = this.width;
         img.height = this.height;
+        
+        if (this.parent.config.cropLargeFaces) {
+            img.width *= 2;
+            img.height *= 2;
+            img.style.left = $.isOdd(this.parent.index) ? -this.width + 'px' : 0;
+            img.style.top = this.parent.index < 2 ? 0 : -this.height + 'px';
+        }
 
         elem.appendChild(img);
     }

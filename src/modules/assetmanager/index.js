@@ -15,7 +15,7 @@ var Promise = require('bluebird'); // https://github.com/petkaantonov/bluebird
 var assets = [],
     buffers = {},
     imageRegex = /\.(gif|jpeg|jpg|png)$/,
-    soundRegex = /\.(mp3|ogg)$/;
+    soundRegex = /\.(mp3|mp4|ogg)$/;
 
 var sounds, images;
 

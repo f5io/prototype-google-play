@@ -11,7 +11,7 @@ var $ = require('./utilities');
 var global = {};
 
 /* Let's define some global configuration options that will emit an event when they are set */
-['displayMetrics', 'useSound', 'useAccelerometer', 'useGamification', 'useDynamicLighting', 'useBackgroundAnimation', 'useMessaging'].forEach(function(key) {
+['displayMetrics', 'useSound', 'useAccelerometer', 'useGamification', 'useDynamicLighting', 'useBackgroundAnimation', 'useMessaging', 'isCeltra'].forEach(function(key) {
     var val = false;
     Object.defineProperty(global, key, {
         enumerable: true,
@@ -34,11 +34,13 @@ global.useDynamicLighting = true;
 
 /* Individual cube specific configuration variables */
 var cube = {
+    castShadow: true,
     useInertia: false,
     useBackgrounds: true,
     useContent: false,
     useVideo: false,
     useGif: false,
+    cropLargeFaces: false,
     isSequential: false,
     normaliseFacialRotation: true
 };
@@ -57,8 +59,11 @@ var titles = {
     useContent: 'Face Content',
     useVideo: 'Video Face Content',
     useGif: 'GIF Face Content',
+    cropLargeFaces: 'Crop Full Face Assets',
     isSequential: 'Sequential Interaction',
-    normaliseFacialRotation: 'Normalise Face Rotation'
+    normaliseFacialRotation: 'Normalise Face Rotation',
+    isCeltra: 'Celtra Platform',
+    castShadow: 'Cast Shadow'
 };
 
 /* Configuration options descriptions */
@@ -75,8 +80,11 @@ var descriptions = {
     useContent: 'Show content on the cube faces.',
     useVideo: 'Show a video on one face of the cube.',
     useGif: 'Show a GIF on one face of the cube.',
+    cropLargeFaces: 'Use the full face assets on the gamified cube to reduce ad weight.',
     isSequential: 'Always display the next face of the cube no matter which way it turns.',
-    normaliseFacialRotation: 'Always display cube faces at the correct orientation.'
+    normaliseFacialRotation: 'Always display cube faces at the correct orientation.',
+    isCeltra: 'Will be green if we are in Celtra.',
+    castShadow: 'Cast a shadow underneath the cube.'
 };
 
 /* Let's expose these objects */

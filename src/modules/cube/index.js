@@ -12,6 +12,7 @@ var $ = require('../utilities');
 var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
+var Shadow = require('./shadow');
 var Fold = require('./fold');
 var Config = require('../config');
 var Interpol = require('interpol');
@@ -50,12 +51,20 @@ Cube.init = function(width, height, index, name, target, config) {
     this.config = $.extend({}, Config.cube, config);
     
     /* Get the `click.mp3` sound from the AssetManager */
-    this.sound = AssetManager.get('assets/sound/click.mp3');
+    var soundUrl = 'assets/sound/click.mp3';
+    soundUrl = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + soundUrl : soundUrl;
+    this.sound = AssetManager.get(soundUrl);
     
     this.currentContent = 0;
     this.nextFaceIndex = 0;
     this.faces = [];
     this.faceData = [];
+
+    /* If the cube is set to cast a shadow, create the shadow and init */
+    this.shadow = Object.create(Shadow);
+    this.shadow.init(this.width, this.height, this.index, this.name, this.target.parentNode, this);
+    this.shadow.opacity = this.config.castShadow ? this.shadow.opacity : 0;
+    this.shadow.render();
     
     /* Select the `light` from DOM */
     this.light = $('[role="light"]')[0];
@@ -125,11 +134,13 @@ Cube.init = function(width, height, index, name, target, config) {
     this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
     this.element.addEventListener('touchstart', touchStart);
 
-    this.element.addEventListener('doubletap', function(e) {
-        var face = getFaceFromTarget(e.target);
-        var fold = Object.create(Fold);
-        fold.init(_self, face.index);
-    });
+    if (Config.global.useGamification) {
+        this.element.addEventListener('doubletap', function(e) {
+            var face = getFaceFromTarget(e.target);
+            var fold = Object.create(Fold);
+            fold.init(_self, face.index);
+        });
+    }
 
     /* Expose private functions as public on the Cube */
     this.getFaceFromTarget = getFaceFromTarget;
@@ -266,8 +277,6 @@ Cube.init = function(width, height, index, name, target, config) {
                 };
 
                 touchEnd($.extend({}, e, { onAnimComplete: onAnimComplete }));
-                // $.emitter.emit(id, $.extend({}, e, { target: elem }));
-                // touchEnd(e);
                 return;
             }
         } else if (!_self.config.useInertia) {
@@ -326,6 +335,21 @@ Cube.init = function(width, height, index, name, target, config) {
                 if (nNearest !== oNearest && Config.global.useSound) _self.sound.play();
                 _self.rotation[axis] = newRot;
                 _self.render();
+
+
+                if (!_self.config.castShadow) return;
+                if (direction === 'leftright') {
+                    _self.shadow.rotation.Z = determineCalculation(newRot);
+                    _self.shadow.render();
+                } else if (direction === 'updown') {
+                    var rotVal = Math.abs(newRot - nNearest) / 45;
+                    var scaleVal = 1 + ((rotVal * _self.shadow.hypRatio) / 2);
+                    var currentRot = Math.abs(_self.shadow.rotation.Z);
+                    _self.shadow.scale.X = (currentRot === 90 || currentRot === 270 ? scaleVal : 1);
+                    _self.shadow.scale.Y = (currentRot === 0 || currentRot === 180 ? scaleVal : 1);
+                    // _self.shadow.opacity = 0.1 * (scaleVal * 1.5);
+                    _self.shadow.render();
+                }
             });
         }
     }
@@ -427,6 +451,21 @@ Cube.init = function(width, height, index, name, target, config) {
                 _self.render();
                 oldV = val;
 
+                if (_self.config.castShadow) {
+                    if (direction === 'leftright') {
+                        _self.shadow.rotation.Z = determineCalculation(val);
+                        _self.shadow.render();
+                    } else if (direction === 'updown') {
+                        var rotVal = Math.abs(val - nNearest) / 45;
+                        var scaleVal = 1 + ((rotVal * _self.shadow.hypRatio) / 2);
+                        var currentRot = Math.abs(_self.shadow.rotation.Z);
+                        _self.shadow.scale.X = (currentRot === 90 || currentRot === 270 ? scaleVal : 1);
+                        _self.shadow.scale.Y = (currentRot === 0 || currentRot === 180 ? scaleVal : 1);
+                        // _self.shadow.opacity = 0.1 * (scaleVal * 1.5);
+                        _self.shadow.render();
+                    }
+                }
+                
                 /*
                  * Check if this touchEnd has been fired because we moved over a different
                  * cube. If we are less than 10 degrees away from our target rotation, begin
@@ -441,8 +480,21 @@ Cube.init = function(width, height, index, name, target, config) {
                 }
             })
             .complete(function complete(val) {
-                _self.rotation[axis] = $.norm($.nearest(val, 90) % 360);
+                var endVal = $.norm($.nearest(val, 90) % 360);
+                _self.rotation[axis] = endVal;
                 _self.render();
+
+                if (_self.config.castShadow) {
+                    if (direction === 'leftright') {
+                        _self.shadow.rotation.Z = determineCalculation(endVal);
+                        _self.shadow.render();
+                    } else if (direction === 'updown') {
+                        _self.shadow.scale.X = _self.shadow.scale.Y = 1;
+                        // _self.shadow.opacity = 0.1;
+                        _self.shadow.render();
+                    }
+                }
+
                 dispatchRotationComplete();
                 if (_self.config.isSequential) {
                     _self.element.addEventListener('touchstart', touchStart);

@@ -25,6 +25,20 @@ function _getFirstSupported(arr) {
 }
 
 /*
+ *  prefixProperty [private] - Calculates the vendor specific string for the supplied CSS property.
+ *  @param {prop} - The property string
+ *
+ *  @return {string} - The vendor specific string.
+ */
+function prefixProperty(prop) {
+    var propCap = prop.charAt(0).toUpperCase() + prop.substring(1);
+    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
+        return prefix === '' ? prop : prefix + propCap;
+    });
+    return _getFirstSupported(arr);
+}
+
+/*
  *  selector - A simple DOM Element selection function.
  *  @param {sel} - A string CSS selector to query for.
  *  @param {context} (Optional) - A HTML Element context to check within, defaults to document.
@@ -185,7 +199,7 @@ selector.isOdd = function(num) {
  *  @return {boolean} - Whether the value is defined or not.
  */
 selector.isDefined = function(val) {
-    return typeof val !== 'undefined';
+    return val !== void 0;
 };
 
 /*
@@ -311,28 +325,19 @@ selector.windowHeight = (function() {
 })();
 
 /*
- *  selector.CSS_TRANSFORM - An IIFE to calculate the vendor specific string for CSS transforms.
- *
- *  @return {string} - The vendor specific string.
+ *  selector.CSS_TRANSFORM - The vendor specific string for CSS transforms.
  */
-selector.CSS_TRANSFORM = (function() {
-    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
-        return prefix === '' ? 'transform' : prefix + 'Transform';
-    });
-    return _getFirstSupported(arr);
-})();
+selector.CSS_TRANSFORM = prefixProperty('transform');
 
 /*
- *  selector.CSS_TRANSFORM_ORIGIN - An IIFE to calculate the vendor specific string for CSS transform origin.
- *
- *  @return {string} - The vendor specific string.
+ *  selector.CSS_TRANSFORM_ORIGIN - The vendor specific string for CSS transform origin.
  */
-selector.CSS_TRANSFORM_ORIGIN = (function() {
-    var arr = ' ms Moz Webkit O'.split(' ').map(function(prefix) {
-        return prefix === '' ? 'transformOrigin' : prefix + 'TransformOrigin';
-    });
-    return _getFirstSupported(arr);
-})();
+selector.CSS_TRANSFORM_ORIGIN = prefixProperty('transformOrigin');
+
+/*
+ *  selector.CSS_PERSPECTIVE - The vendor specific string for CSS perspective.
+ */
+selector.CSS_PERSPECTIVE = prefixProperty('perspective');
 
 /*
  *  selector.computeVertexData - Take an element and return the A, B, C and D vertices.

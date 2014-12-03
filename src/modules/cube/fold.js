@@ -1,4 +1,5 @@
 var $ = require('../utilities');
+var content = require('./content');
 var Config = require('../config');
 var Vect3 = require('./vect3');
 var AssetManager = require('../assetmanager');
@@ -15,6 +16,7 @@ var Fold = {
         this.faceIndex = faceIndex;
         this.cubeIndex = cube.index;
         this.cubeRotation = cube.rotation;
+        this.cube = cube;
         this.folds = [];
 
         var styles = {
@@ -53,10 +55,21 @@ var Fold = {
                 var fold = $.getElement('div', 'fold', {}, styles);
 
                 var img = new Image();
-                var src = 'assets/img/cubes/cube0' + (i + 1) + '/side' + (this.faceIndex + 1) + '.jpg';
+                var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+                var dict = { i : this.faceIndex + 1 };
+                dict.name = this.cube.config.cropLargeFaces ? 'main' : 'cube0' + (i + 1);
+                var src = $.format(str, dict);
+
                 img.src = AssetManager.get(src).uri();
                 img.width = this.width;
                 img.height = this.height;
+
+                if (this.cube.config.cropLargeFaces) {
+                    img.width *= 2;
+                    img.height *= 2;
+                    img.style.left = $.isOdd(i + 1) ? 0 : -this.width + 'px';
+                    img.style.top = i < 2 ? 0 : -this.height + 'px';
+                }
 
                 fold.appendChild(img);
 
