@@ -59,25 +59,25 @@ function init() {
 
         loadView.className = 'off';
 
-        // var phone = Object.create(Phone);
-        // phone.init(phoneView);
+        var phone = Object.create(Phone);
+        phone.init(phoneView);
 
-        // function runPhoneRot() {
-        //     Interpol.tween()
-        //         .duration(2200)
-        //         .ease(Interpol.easing.easeInOutSine)
-        //         .to(360)
-        //         .step(function(val) {
-        //             phone.rotation.Y = val;
-        //             phone.render();
-        //         })
-        //         .complete(runPhoneRot)
-        //         .start();
-        // }
+        function runPhoneRot() {
+            Interpol.tween()
+                .duration(2200)
+                .ease(Interpol.easing.easeInOutSine)
+                .to(360)
+                .step(function(val) {
+                    phone.rotation.Y = val;
+                    phone.render();
+                })
+                .complete(runPhoneRot)
+                .start();
+        }
 
-        // runPhoneRot();
+        runPhoneRot();
 
-        // return;
+        return;
 
         /* All assets are preloaded */
         var cubes = {}, shadow,
