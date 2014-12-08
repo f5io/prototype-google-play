@@ -147,6 +147,7 @@ Cube.init = function(width, height, index, name, target, config) {
     this.getNormalisedFaceRotation = normaliseFaces;
     this.rerenderFaces = renderFaces.bind(this, true);
     this.resetNormalisedFaces = resetNormalisedFaces;
+    this.getAxisDefinition = getAxis;
 
     /* Private variables */
     var startX, startY, startT,

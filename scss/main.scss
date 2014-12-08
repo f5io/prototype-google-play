@@ -10,6 +10,18 @@
 	}
 }
 
+@include keyframes(phone) {
+	0% {
+		transform: rotateY(0deg);
+	}
+	50% {
+		transform:  /*translateZ(-250px) */rotateY(180deg);
+	}
+	100% {
+		transform: rotateY(360deg);
+	}
+}
+
 * {
 	box-sizing: border-box;
 	font-family: 'Roboto', 'Helvetica Neue', sans-serif;
@@ -367,6 +379,7 @@ a {
 	display: inline-block;
 	margin: auto;
 	z-index: 5;
+	will-change: transform;
 
 	&.disabled {
 		pointer-events: none;
@@ -414,6 +427,7 @@ a {
 			pointer-events: none;
 			background: black;
 			transform: translate3d(0, 0, 0);
+			will-change: opacity;
 		}
 
 		div.cover {
@@ -456,4 +470,272 @@ a {
 		}
 	}
 
+}
+
+[role="phone"] {
+	position: absolute;
+	width: 282px;
+	height: 539px;
+	left: 0; right: 0;
+	top: 0; bottom: 0;
+	margin: auto;
+	// transform: rotateY(90deg);
+	transform-style: preserve-3d;
+	// animation: phone 2s infinite linear;
+
+	& > * {
+		position: absolute;
+		backface-visibility: hidden;
+	}
+
+	[role^="corner"] {
+		transform-style: preserve-3d;
+		width: 14px;
+		height: 6px;
+		position: absolute;
+		top: 0; bottom: 0;
+		left: 0; right: 0;
+		margin: auto;
+		div {
+			position: absolute;
+			width: 14px;
+			height: 10px;
+			background: #999bb0;
+
+			&:nth-child(1) {
+				height: 26px;
+				transform: translateY(-2px);
+				background: #8e8fa2;
+			}
+
+			&:nth-child(2) {
+				transform: translateY(-12px) translateZ(-3px) rotateX(28deg);
+				background: #7d7f8f;
+			}
+
+			&:nth-child(3) {
+				transform: translateY(-20px) translateZ(-10px) rotateX(49deg);
+				background: #6d6e7c;
+			}
+
+			&:nth-child(4) {
+				transform: translateY(-24px) translateZ(-17px) rotateX(60deg);
+			}
+
+			&:nth-child(5) {
+				transform: translateY(-28px) translateZ(-25px) rotateX(75deg);
+			}
+
+			&:nth-child(6) {
+				height: 26px;
+				transform: translateY(-37px) translateZ(-41px) rotateX(88deg);
+			}
+
+		}
+	}
+
+	[role="corner-tl"] {
+		transform: rotateY(-90deg) translateY(-237px) translateZ(138px) translateX(9px);
+	}
+
+	[role="corner-tr"] {
+		transform: rotateY(90deg) translateY(-237px) translateZ(138px) translateX(-9px);
+	}
+
+	[role="corner-bl"] {
+		transform: rotateX(180deg) rotateY(-90deg) translateY(-237px) translateZ(138px) translateX(-9px);
+	}
+
+	[role="corner-br"] {
+		transform: rotateX(180deg) rotateY(90deg) translateY(-237px) translateZ(138px) translateX(9px);
+	}
+
+	[role^="side"] {
+		width: 14px;
+		height: 492px;
+		position: absolute;
+		top: 0; bottom: 0;
+		left: 0; right: 0;
+		margin: auto;
+		transform-style: preserve-3d;
+
+		.shadow {
+			width: 100%;
+			height: 100%;
+			background: black;
+			opacity: 0;
+			will-change: opacity;
+		}
+	}
+
+	[role="side-left"] {
+		background: url(../img/phone/side-left.png);
+		transform: translateX(-139px) translateZ(10px) rotateY(-90deg) scaleY(0.95);
+	}
+
+	[role="side-right"] {
+		background: url(../img/phone/side-right.png);
+		transform: translateX(139px) translateZ(10px) rotateY(90deg) scaleY(0.95);
+	}
+
+	[role="front"], [role="back"] {
+		width: 282px;
+		height: 539px;
+		transform-style: preserve-3d;
+	}
+
+	[role="front"] {
+		transform: translateZ(17px) scale(0.99, 0.99);
+		background: url(../img/phone/front.png);
+
+		.highlight {
+			width: 97%;
+			height: 98.5%;
+			margin: 1.5%;
+			overflow: hidden;
+			border-radius: 35px;
+			position: absolute;
+			top: 0;
+			opacity: 1;
+			will-change: opacity;
+			transform: translateZ(2px);
+			transform-origin: 50% 0;
+
+			&:after {
+				content: ' ';
+				display: block;
+				position: absolute;
+				width: 170%;
+				height: 60%;
+				background: linear-gradient(top, rgba(white, 0) 0%,rgba(white, 0.4) 100%);
+				transform: rotate(-25deg) translateX(-100px) translateY(-100px);
+			}
+		}
+
+		.shadow {
+			width: 97%;
+			height: 98.5%;
+			margin: 1.5%;
+			overflow: hidden;
+			border-radius: 35px;
+			position: absolute;
+			top: 0;
+			opacity: 0;
+			background: black;
+			transform: translateZ(1px);
+		}
+	}
+
+	[role="back"] {
+		transform: rotateY(180deg) translateZ(24px);
+
+		.face {
+			width: 14.2%;
+			height: 100%;
+			position: absolute;
+			background: url(../img/phone/back.png) no-repeat;
+			transform-style: preserve-3d;
+			overflow: hidden;
+
+			.shadow {
+				width: 100%;
+				height: 98%;
+				position: absolute;
+				top: 0; bottom: 0;
+				margin: auto;
+				background: black;
+				opacity: 0;
+				will-change: opacity;
+				transform: translateZ(1px);
+			}
+
+			&:nth-child(1) {
+				transform: translateX(-3px) translateZ(-24px) rotateY(-19deg);
+
+				.shadow {
+					border-top-left-radius: 35px;
+					border-bottom-left-radius: 35px;
+				}
+			}
+
+			&:nth-child(2) {
+				left: 11.111%;
+				background-position-x: -31.33px;
+				transform: translateZ(-13px) rotateY(-17deg);
+			}
+			
+			/* Done */
+			&:nth-child(3) {
+				left: 22.222%;
+				background-position-x: -62.66px;
+				transform: translateZ(-5px) rotateY(-14deg);
+			}
+			
+			/* Done */
+			&:nth-child(4) {
+				left: 33.333%;
+				background-position-x: -93.99px;
+				transform: translateZ(1px) rotateY(-7deg);
+			}
+	
+			/* Middle */
+			&:nth-child(5) {
+				left: 44.444%;
+				background-position-x: -125.32px;
+				transform: translateZ(3px);
+			}
+			
+			/* Done */
+			&:nth-child(6) {
+				left: 55.555%;
+				background-position-x: -156.65px;
+				transform: translateZ(1px) rotateY(7deg);
+			}
+
+			/* Done */
+			&:nth-child(7) {
+				left: 66.666%;
+				background-position-x: -187.98px;
+				transform: translateZ(-5px) rotateY(14deg);
+			}
+
+			&:nth-child(8) {
+				left: 77.777%;
+				background-position-x: -219.31px;
+				transform: translateZ(-14px) rotateY(17deg);
+			}
+
+			&:nth-child(9) {
+				left: 88.888%;
+				background-position-x: -250.64px;
+				transform: translateX(-1px) translateZ(-24px) rotateY(19deg);
+
+				.shadow {
+					width: 80%;
+					border-top-right-radius: 35px;
+					border-bottom-right-radius: 35px;
+				}
+			}
+
+
+
+			// &:nth-child(3) {
+			// 	left: 39%;
+			// 	background-position-x: -112.8px;
+			// 	transform: translateZ(2px);
+			// }
+
+			// &:nth-child(4) {
+			// 	left: 59%;
+			// 	background-position-x: -169.2px;
+			// 	transform: translateZ(-5px) rotateY(14deg);
+			// }
+
+			// &:nth-child(5) {
+			// 	left: 79%;
+			// 	background-position-x: -225.6px;
+			// 	transform: translateZ(-21px) rotateY(20deg);
+			// }
+		}
+	}
 }

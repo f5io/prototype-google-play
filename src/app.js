@@ -19,6 +19,8 @@ var Background = require('./modules/background');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
+var Phone = require('./modules/phone');
+
 /* Import Libraries */
 var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
@@ -26,12 +28,13 @@ var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Sli
 function init() {
 
     /* Constants */
-    var CUBE_WIDTH = $.windowWidth(),//250,
+    var CUBE_WIDTH = /* $.windowWidth(), */250,
         HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
         CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50;
 
     /* Cache the views */
     var containerView = $('[role="container"]')[0],
+        phoneView = $('[role="phone"]')[0],
         lightView = $('[role="light"]')[0],
         mainView = $('[role="main"]')[0],
         cubeView = $('[role="cube"]')[0],
@@ -55,6 +58,26 @@ function init() {
     ]).preload().then(function() {
 
         loadView.className = 'off';
+
+        // var phone = Object.create(Phone);
+        // phone.init(phoneView);
+
+        // function runPhoneRot() {
+        //     Interpol.tween()
+        //         .duration(2200)
+        //         .ease(Interpol.easing.easeInOutSine)
+        //         .to(360)
+        //         .step(function(val) {
+        //             phone.rotation.Y = val;
+        //             phone.render();
+        //         })
+        //         .complete(runPhoneRot)
+        //         .start();
+        // }
+
+        // runPhoneRot();
+
+        // return;
 
         /* All assets are preloaded */
         var cubes = {}, shadow,
@@ -223,9 +246,10 @@ function init() {
                 cube.element.style.left = $.isOdd(i + 1) ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
                 cube.element.style.top = i < 2 ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
 
-                cube.rotation.X = $.getRandomRotation([0, 180]);
-                cube.rotation.Y = $.getRandomRotation([90, 270]);
-                cube.rotation.Z = $.getRandomRotation();
+                // cube.rotation.X = $.getRandomRotation([0, 180]);
+                // cube.rotation.Y = $.getRandomRotation([90, 270]);
+                // cube.rotation.Z = $.getRandomRotation();
+
                 cube.render();
                 if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
 
@@ -277,7 +301,8 @@ function init() {
          *  @param {index} - The index of the Cube for sequential animation.
          */
         function animateCubeIn(cube, index) {
-            var container = cube.target;
+            var container = cube.target,
+                numOfRotationsToDo = 3;
 
             var from = -$.windowHeight(),
                 to = 0;
@@ -294,7 +319,46 @@ function init() {
                         return 'translateY(' + val + 'px)';
                     });
                 })
+                .complete(recursiveRotate)
                 .start();
+
+            function recursiveRotate() {
+                if (--numOfRotationsToDo < 0) return;
+
+                var sV, oldV,
+                    useVerticalAxis = $.range(0, 100) < 50 ? true : false,
+                    axisDef = cube.getAxisDefinition(cube.rotation),
+                    axis = useVerticalAxis ? axisDef.UD : axisDef.LR,
+                    delay = numOfRotationsToDo === 2 && (index === 0 || index === 3) ? 0 : 200;
+
+                Interpol.tween()
+                    .delay(delay)
+                    .duration(300)
+                    .from(0)
+                    .to(90)
+                    .ease(Interpol.easing.easeOutCirc)
+                    .step(function(val) {
+                        oldV = oldV || val;
+                        var nNearest = $.nearest(val, 90);
+                        var oNearest = $.nearest(oldV, 90);
+                        /* 
+                         * If the `nNearest` and `oNearest` do not match, we know the Cube
+                         * has passed a 45degree rotation and therefore we should play the sound.
+                         */
+                        if (nNearest !== oNearest && Config.global.useSound) cube.sound.play();
+                        cube.rotation[axis] = sV + val;
+                        cube.render();
+                        oldV = val;
+                    })
+                    .complete(function(val) {
+                        //cube.rotation[axis] = $.norm($.nearest(val, 90) % 360);
+                        if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
+                        recursiveRotate();
+                    })
+                    .start(function() {
+                        sV = cube.rotation[axis];
+                    });
+            }
         }
 
         /*
