@@ -19,8 +19,6 @@ var Background = require('./modules/background');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
-var Phone = require('./modules/phone');
-
 /* Import Libraries */
 var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
@@ -58,26 +56,6 @@ function init() {
     ]).preload().then(function() {
 
         loadView.className = 'off';
-
-        // var phone = Object.create(Phone);
-        // phone.init(phoneView);
-
-        // function runPhoneRot() {
-        //     Interpol.tween()
-        //         .duration(2200)
-        //         .ease(Interpol.easing.easeInOutSine)
-        //         .to(360)
-        //         .step(function(val) {
-        //             phone.rotation.Y = val;
-        //             phone.render();
-        //         })
-        //         .complete(runPhoneRot)
-        //         .start();
-        // }
-
-        // runPhoneRot();
-
-        // return;
 
         /* All assets are preloaded */
         var cubes = {}, shadow,
