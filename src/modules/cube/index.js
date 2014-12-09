@@ -148,6 +148,7 @@ Cube.init = function(width, height, index, name, target, config) {
     this.rerenderFaces = renderFaces.bind(this, true);
     this.resetNormalisedFaces = resetNormalisedFaces;
     this.getAxisDefinition = getAxis;
+    this.determineCalculation = determineCalculation;
 
     /* Private variables */
     var startX, startY, startT,

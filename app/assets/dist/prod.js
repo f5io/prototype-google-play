@@ -92,7 +92,7 @@ function init() {
             if (key === 'useGamification') {
                 clearCube();
                 if (value) initialiseFourCubes();
-                else initialiseBigCube();
+                else initialiseBigCube(true);
             }
 
             // if (key === 'useAccelerometer') {
@@ -239,7 +239,7 @@ function init() {
             shadow = Object.create(Shadow);
             shadow.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'shadow', cubeView);
             shadow.render();
-            animateShadowIn();
+            animateShadowIn(shadow);
 
             Debug.defineCubeProperties(configs);
         }
@@ -248,7 +248,7 @@ function init() {
          *  initialiseBigCube - Initialises the single large cube and passes
          *  its config into the Debug panel.
          */
-        function initialiseBigCube() {
+        function initialiseBigCube(flourish) {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
@@ -264,6 +264,8 @@ function init() {
             bigcube.render();
 
             Debug.defineCubeProperties([bigcube]);
+
+            if (flourish) animateCubeFaceMatchComplete(bigcube);
         }
 
         /*
@@ -341,9 +343,38 @@ function init() {
         }
 
         /*
-         *  animateShadowIn [private] - Animate the shadow in from a scale and opacity of 0.
+         *  animateCubeFaceMatchComplete [private] - Animate a flourish when the user completes the face matching.
+         *  @param {cube} - The Cube class to animate.
          */
-        function animateShadowIn(cube, index) {
+        function animateCubeFaceMatchComplete(cube) {
+            var currentOffset = -(cube.width / 2);
+            var from = { shadow: 0, cube: currentOffset },
+                to = { shadow: 40, cube: currentOffset + 40 };
+
+            var axisDef = cube.getAxisDefinition(cube.rotation);
+
+            Interpol.tween()
+                .duration(400)
+                .from(from)
+                .to(to)
+                .ease(Interpol.easing.easeInOutBack)
+                .step(function(val) {
+                    cube.target.style[$.CSS_TRANSFORM] = 'translateZ(' + val.cube + 'px)';
+                    cube.shadow.translate.Y = val.shadow;
+
+                    cube.shadow.render();
+                })
+                .complete(function() {
+                    if (!this.isReversed) this.reverse();
+                })
+                .start();
+        }
+
+        /*
+         *  animateShadowIn [private] - Animate the shadow in from a scale and opacity of 0.
+         *  @param {shadow} - The Shadow class to animate.
+         */
+        function animateShadowIn(shadow) {
             shadow.scale.X = shadow.scale.Y = shadow.opacity = 0;
 
             var from = 0,
@@ -683,6 +714,7 @@ if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
         _t.isDelayed = false;
         _t.repeatCount = 0;
         _t.paused = false;
+        _t.isReversed = false;
         _t.easing = _.easing.easeNone;
         _t.onStep = _.noop;
         _t.onComplete = _.noop;
@@ -734,6 +766,8 @@ if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
         reverse : function() {
             var sV = this.startVal,
                 eV = this.endVal;
+
+            this.isReversed = !this.isReversed;
 
             this.startVal = eV;
             this.endVal = sV;
@@ -7595,6 +7629,7 @@ Cube.init = function(width, height, index, name, target, config) {
     this.rerenderFaces = renderFaces.bind(this, true);
     this.resetNormalisedFaces = resetNormalisedFaces;
     this.getAxisDefinition = getAxis;
+    this.determineCalculation = determineCalculation;
 
     /* Private variables */
     var startX, startY, startT,
