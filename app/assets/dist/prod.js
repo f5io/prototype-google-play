@@ -20,8 +20,6 @@ var Background = require('./modules/background');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
-var Phone = require('./modules/phone');
-
 /* Import Libraries */
 var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
@@ -44,7 +42,7 @@ function init() {
 
     containerView.style[$.CSS_PERSPECTIVE] = CONTAINER_PERSPECTIVE + 'px';
 
-    var pre = Config.global.isCeltra ? 'http://labs.f5.io/essence/' : '';
+    var pre = Config.global.isCeltra ? Config.BASE_URL : '';
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
@@ -59,26 +57,6 @@ function init() {
     ]).preload().then(function() {
 
         loadView.className = 'off';
-
-        // var phone = Object.create(Phone);
-        // phone.init(phoneView);
-
-        // function runPhoneRot() {
-        //     Interpol.tween()
-        //         .duration(2200)
-        //         .ease(Interpol.easing.easeInOutSine)
-        //         .to(360)
-        //         .step(function(val) {
-        //             phone.rotation.Y = val;
-        //             phone.render();
-        //         })
-        //         .complete(runPhoneRot)
-        //         .start();
-        // }
-
-        // runPhoneRot();
-
-        // return;
 
         /* All assets are preloaded */
         var cubes = {}, shadow,
@@ -401,7 +379,7 @@ if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
     $.ready(init);
 }
 
-},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":51,"./modules/cube/shadow":53,"./modules/debug":55,"./modules/messaging":56,"./modules/orient":57,"./modules/phone":58,"./modules/utilities":59,"interpol":2,"stats":3}],2:[function(require,module,exports){
+},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":51,"./modules/cube/shadow":53,"./modules/debug":55,"./modules/messaging":56,"./modules/orient":57,"./modules/utilities":58,"interpol":2,"stats":3}],2:[function(require,module,exports){
 (function (global){
 ;__browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 (function(factory) {
@@ -6884,7 +6862,7 @@ Background.remove = function() {
 };
 
 module.exports = Background;
-},{"../assetmanager":41,"../config":46,"../utilities":59,"interpol":2}],46:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"interpol":2}],46:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Configuration
@@ -6894,6 +6872,8 @@ module.exports = Background;
 
 /* General Utilites */
 var $ = require('./utilities');
+
+var BASE_URL = 'http://labs.f5.io/essence/';
 
 var global = {};
 
@@ -6976,12 +6956,13 @@ var descriptions = {
 
 /* Let's expose these objects */
 module.exports = {
+    BASE_URL: BASE_URL,
     global: global,
     cube: cube,
     titles: titles,
     descriptions: descriptions
 };
-},{"./utilities":59}],47:[function(require,module,exports){
+},{"./utilities":58}],47:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Component Base Class
@@ -7046,7 +7027,7 @@ var Common = {
 };
 
 module.exports = Common;
-},{"../utilities":59}],48:[function(require,module,exports){
+},{"../utilities":58}],48:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Content Matrix
@@ -7161,7 +7142,7 @@ var content = {
 };
 
 module.exports = content;
-},{"../../config":46,"../../messaging":56,"../../utilities":59}],49:[function(require,module,exports){
+},{"../../config":46,"../../messaging":56,"../../utilities":58}],49:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Face Class
@@ -7235,7 +7216,7 @@ Face.populateElement = function(elem) {
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
         var name = this.parent.config.cropLargeFaces ? 'main' : this.name;
-        var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+        var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
         var url = $.format(str, { i: this.index + 1, name: name });
         img.src = AssetManager.get(url).uri();
         img.width = this.width;
@@ -7283,7 +7264,8 @@ Face.changeContent = function(index) {
 
     if (this.parent.config.useBackgrounds) {
         var img = $('img', this.element)[0];
-        var url = $.format(content.background, { i: index + 1, name: this.name });
+        var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
+        var url = $.format(str, { i: index + 1, name: this.name });
         img.src = AssetManager.get(url).uri();
     }
 
@@ -7310,7 +7292,7 @@ Face.render = function() {
 module.exports = Face;
 
 
-},{"../assetmanager":41,"../config":46,"../utilities":59,"./common":47,"./content":48}],50:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./common":47,"./content":48}],50:[function(require,module,exports){
 var $ = require('../utilities');
 var content = require('./content');
 var Config = require('../config');
@@ -7368,7 +7350,7 @@ var Fold = {
                 var fold = $.getElement('div', 'fold', {}, styles);
 
                 var img = new Image();
-                var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+                var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
                 var dict = { i : this.faceIndex + 1 };
                 dict.name = this.cube.config.cropLargeFaces ? 'main' : 'cube0' + (i + 1);
                 var src = $.format(str, dict);
@@ -7462,7 +7444,7 @@ var Fold = {
 };
 
 module.exports = Fold;
-},{"../assetmanager":41,"../config":46,"../utilities":59,"./content":48,"./vect3":54,"interpol":2}],51:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./content":48,"./vect3":54,"interpol":2}],51:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Class
@@ -7517,7 +7499,7 @@ Cube.init = function(width, height, index, name, target, config) {
     
     /* Get the `click.mp3` sound from the AssetManager */
     var soundUrl = 'assets/sound/click.mp3';
-    soundUrl = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + soundUrl : soundUrl;
+    soundUrl = Config.global.isCeltra ? Config.BASE_URL + soundUrl : soundUrl;
     this.sound = AssetManager.get(soundUrl);
     
     this.currentContent = 0;
@@ -8131,7 +8113,7 @@ Cube.render = function() {
 };
 
 module.exports = Cube;
-},{"../assetmanager":41,"../config":46,"../utilities":59,"./common":47,"./face":49,"./fold":50,"./matrix":52,"./shadow":53,"./vect3":54,"interpol":2}],52:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./common":47,"./face":49,"./fold":50,"./matrix":52,"./shadow":53,"./vect3":54,"interpol":2}],52:[function(require,module,exports){
 module.exports={
     "0" : {
         "0" : {
@@ -8841,7 +8823,7 @@ Shadow.render = function() {
 };
 
 module.exports = Shadow;
-},{"../config":46,"../utilities":59,"./common":47}],54:[function(require,module,exports){
+},{"../config":46,"../utilities":58,"./common":47}],54:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Vector3 Mathematics
@@ -9135,7 +9117,7 @@ module.exports = {
     init: init,
     defineCubeProperties: defineCubeProperties
 };
-},{"../config":46,"../utilities":59,"interpol":2,"stats":3}],56:[function(require,module,exports){
+},{"../config":46,"../utilities":58,"interpol":2,"stats":3}],56:[function(require,module,exports){
 var parentWindow,
     parentOrigin;
 
@@ -9232,83 +9214,7 @@ Orient.reset = function(fn) {
 
 
 module.exports = Orient;
-},{"../utilities":59,"interpol":2}],58:[function(require,module,exports){
-var $ = require('../utilities');
-var Vect3 = require('../cube/vect3');
-
-var Phone = {
-    init: function(elem) {
-        this.element = elem;
-        this.translate = { X : 0, Y : 0, Z : 0 };
-        this.rotation = { X : 0, Y : 0, Z : 0 };
-        this.scale = { X : 1, Y : 1 };
-        this.nextFaceIndex = 0;
-
-        /* Select the `light` from DOM */
-        this.light = $('[role="light"]')[0];
-        
-        /* The light never moves so define the `lightTransform` on `init` */
-        this.lightTransform = $.getTransform(this.light);
-
-        this.faces = $('.face', elem);
-        this.faceData = this.faces.map(function(face) {
-            var shadowSel = $('.shadow', face),
-                highlightSel = $('.highlight', face);
-
-            var obj = { face: face };
-            if (highlightSel.length) obj.highlight = highlightSel[0];
-            if (shadowSel.length) obj.shadow = shadowSel[0];
-
-            return obj;
-        }).map(function(obj) {
-            var verticies = $.computeVertexData(obj.face);
-            if ('highlight' in obj) obj.highlight.style.opacity = 0;
-            if ('shadow' in obj) obj.shadow.style.opacity = 0;
-            return $.extend(obj, {
-                verticies: verticies,
-                normal: Vect3.normalize(Vect3.cross(Vect3.sub(verticies.b, verticies.a), Vect3.sub(verticies.c, verticies.a))),
-                center: Vect3.divs(Vect3.sub(verticies.c, verticies.a), 2)
-            });
-        });
-
-        this.render();
-
-    },
-    render: function() {
-        this.element.style[$.CSS_TRANSFORM] = 'rotateX(' + this.rotation.X + 'deg) ' +
-            'rotateY(' + this.rotation.Y + 'deg) ' +
-            'rotateZ(' + this.rotation.Z + 'deg) ' +
-            'translateX(' + this.translate.X + 'px) ' +
-            'translateY(' + this.translate.Y + 'px) ' +
-            'translateZ(' + this.translate.Z + 'px) ' +
-            'scale(' + this.scale.X + ',' + this.scale.Y + ')';
-
-        /* Dynamic Lighting */
-        var face, direction, amount,
-            faceNum = 0, faceCount = this.faceData.length,
-            cubeTransform = $.getTransform(this.element),
-            lightPosition = Vect3.rotate(this.lightTransform.translate, Vect3.muls(cubeTransform.rotate, -1));
-
-        while (++faceNum < faceCount) {
-            face = this.faceData[this.nextFaceIndex];
-            direction = Vect3.normalize(Vect3.sub(lightPosition, face.center));
-            amount = 1 - Math.max(0, Vect3.dot(face.normal, direction)).toFixed(3);
-            if (face.light != amount) {
-                face.light = amount;
-                if ('shadow' in face) face.shadow.style.opacity = amount;
-                var val = 1 - (amount * 2);
-                if ('highlight' in face) {
-                    face.highlight.style.opacity = val;
-                    face.highlight.style[$.CSS_TRANSFORM] = 'translateZ(2px) scaleY(' + val * 1.2 + ')';
-                }
-            }
-            this.nextFaceIndex = (this.nextFaceIndex + 1) % faceCount;
-        }
-    }
-};
-
-module.exports = Phone;
-},{"../cube/vect3":54,"../utilities":59}],59:[function(require,module,exports){
+},{"../utilities":58,"interpol":2}],58:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Utilities

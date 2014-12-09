@@ -41,7 +41,7 @@ function init() {
 
     containerView.style[$.CSS_PERSPECTIVE] = CONTAINER_PERSPECTIVE + 'px';
 
-    var pre = Config.global.isCeltra ? 'http://labs.f5.io/essence/' : '';
+    var pre = Config.global.isCeltra ? Config.BASE_URL : '';
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([

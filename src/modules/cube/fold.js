@@ -55,7 +55,7 @@ var Fold = {
                 var fold = $.getElement('div', 'fold', {}, styles);
 
                 var img = new Image();
-                var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+                var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
                 var dict = { i : this.faceIndex + 1 };
                 dict.name = this.cube.config.cropLargeFaces ? 'main' : 'cube0' + (i + 1);
                 var src = $.format(str, dict);

@@ -52,7 +52,7 @@ Cube.init = function(width, height, index, name, target, config) {
     
     /* Get the `click.mp3` sound from the AssetManager */
     var soundUrl = 'assets/sound/click.mp3';
-    soundUrl = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + soundUrl : soundUrl;
+    soundUrl = Config.global.isCeltra ? Config.BASE_URL + soundUrl : soundUrl;
     this.sound = AssetManager.get(soundUrl);
     
     this.currentContent = 0;
