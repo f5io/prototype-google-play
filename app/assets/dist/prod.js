@@ -27,7 +27,7 @@ var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Sli
 function init() {
 
     /* Constants */
-    var CUBE_WIDTH = /* $.windowWidth(), */250,
+    var CUBE_WIDTH = $.windowWidth() * 0.8, /*250,*/
         HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
         CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50;
 
