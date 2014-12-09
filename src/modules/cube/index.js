@@ -52,7 +52,7 @@ Cube.init = function(width, height, index, name, target, config) {
     
     /* Get the `click.mp3` sound from the AssetManager */
     var soundUrl = 'assets/sound/click.mp3';
-    soundUrl = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + soundUrl : soundUrl;
+    soundUrl = Config.global.isCeltra ? Config.BASE_URL + soundUrl : soundUrl;
     this.sound = AssetManager.get(soundUrl);
     
     this.currentContent = 0;
@@ -148,6 +148,7 @@ Cube.init = function(width, height, index, name, target, config) {
     this.rerenderFaces = renderFaces.bind(this, true);
     this.resetNormalisedFaces = resetNormalisedFaces;
     this.getAxisDefinition = getAxis;
+    this.changeCubeNameChangeInvisibleFacesAndRotate = changeCubeNameChangeInvisibleFacesAndRotate;
 
     /* Private variables */
     var startX, startY, startT,
@@ -628,8 +629,59 @@ Cube.init = function(width, height, index, name, target, config) {
      *  dispatchRotationComplete [private] - Publish a `rotation_complete` event if the Cube is `gamified`.
      */
     function dispatchRotationComplete() {
-        if (Config.global.useGamification) $.emitter.emit('rotation_complete');
+        if (Config.global.useGamification && _self.config.matchSides !== false) $.emitter.emit('rotation_complete');
     }
+
+    /*
+     *  changeCubeNameChangeInvisibleFacesAndRotate [private] - Change the cube name from outside of the Cube.
+     *  @param {name} - The new name of the cube and subsequent sides.
+     */
+    function changeCubeNameChangeInvisibleFacesAndRotate(name) {
+        var target = document.elementFromPoint($.windowWidth() / 2, $.windowHeight() / 2),
+            visibleSide = getFaceFromTarget(target);
+
+        _self.name = name;
+
+        _self.faces.map(function(face) {
+            face.name = name;
+            return face;
+        }).filter(function(face) {
+            return face.index !== visibleSide.index;
+        }).forEach(function(face) {
+            _self.currentContent = face.changeContent(0);
+        });
+
+        normaliseFaces(_self.rotation);
+
+        var axisDef = getAxis(_self.rotation),
+            startValue;
+
+        Interpol.tween()
+            .from(0)
+            .to(90)
+            .ease(Interpol.easing.easeOutCirc)
+            .step(function(val) {
+                _self.rotation[axisDef.LR] = startValue + val;
+                _self.render();
+            })
+            .complete(function() {
+                // if (!_self.config.isSequential) {
+                    _self.faces.forEach(function(face, i) {
+                        face.changeContent(i);
+                    });
+
+                    _self.rotation.X = _self.rotation.Y = _self.rotation.Z = 0;
+                    _self.render();
+                // }
+                normaliseFaces(_self.rotation);
+            })
+            .start(function() {
+                startValue = _self.rotation[axisDef.LR];
+            });
+    }
+
+
+
 };
 
 /*

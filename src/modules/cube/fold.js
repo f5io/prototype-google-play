@@ -10,13 +10,13 @@ var Interpol = require('interpol');
 
 var Fold = {
     init: function(cube, faceIndex) {
+        this.cube = cube;
         this.width = cube.width;
         this.height = cube.height;
         this.target = cube.target;
         this.faceIndex = faceIndex;
         this.cubeIndex = cube.index;
         this.cubeRotation = cube.rotation;
-        this.cube = cube;
         this.folds = [];
 
         var styles = {
@@ -55,7 +55,7 @@ var Fold = {
                 var fold = $.getElement('div', 'fold', {}, styles);
 
                 var img = new Image();
-                var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+                var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
                 var dict = { i : this.faceIndex + 1 };
                 dict.name = this.cube.config.cropLargeFaces ? 'main' : 'cube0' + (i + 1);
                 var src = $.format(str, dict);
@@ -64,7 +64,7 @@ var Fold = {
                 img.width = this.width;
                 img.height = this.height;
 
-                if (this.cube.config.cropLargeFaces) {
+                if (this.cube.config.cropLargeFaces || this.cube.config.matchSides === false) {
                     img.width *= 2;
                     img.height *= 2;
                     img.style.left = $.isOdd(i + 1) ? 0 : -this.width + 'px';
@@ -95,7 +95,7 @@ var Fold = {
 
             indexes.forEach(function(index, i, arr) {
                 var fold = _self.folds[index];
-                if (i === 0) {
+                if (i === 0 && _self.cube.config.matchSides !== false) {
                     fold.element.style[$.CSS_TRANSFORM] = 'rotate' + fold.axis + '(0deg)';
                     fold.shadow.style.opacity = 0;
                     return;
@@ -103,6 +103,10 @@ var Fold = {
 
                 var time = 200;
                 var delay = i * time;
+
+                if (i === 0) {
+                    delay = arr.length * time;
+                }
 
                 Interpol.tween()
                     .from(fold.start)
@@ -135,7 +139,8 @@ var Fold = {
                         }
                     })
                     .complete(function() {
-                        if (i === (arr.length - 1)) $.emitter.emit('fold_out_complete', _self.cubeRotation);
+                        var lenToCheck = _self.cube.config.matchSides === false ? 0 : arr.length - 1;
+                        if (i === lenToCheck) $.emitter.emit('fold_out_complete', _self.cubeRotation);
                     })
                     .start(function() {
                         $.emitter.emit('fold_out_start', index, time * 0.5);

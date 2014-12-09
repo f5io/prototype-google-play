@@ -71,7 +71,7 @@ Face.populateElement = function(elem) {
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
         var name = this.parent.config.cropLargeFaces ? 'main' : this.name;
-        var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+        var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
         var url = $.format(str, { i: this.index + 1, name: name });
         img.src = AssetManager.get(url).uri();
         img.width = this.width;

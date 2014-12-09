@@ -8,6 +8,8 @@
 /* General Utilites */
 var $ = require('./utilities');
 
+var BASE_URL = 'http://labs.f5.io/essence/';
+
 var global = {};
 
 /* Let's define some global configuration options that will emit an event when they are set */
@@ -28,7 +30,7 @@ var global = {};
 /* Initial global defaults */
 global.displayMetrics = false;
 global.useSound = true;
-global.useGamification = true;
+// global.useGamification = true;
 global.useAccelerometer = true;
 global.useDynamicLighting = true;
 
@@ -89,6 +91,7 @@ var descriptions = {
 
 /* Let's expose these objects */
 module.exports = {
+    BASE_URL: BASE_URL,
     global: global,
     cube: cube,
     titles: titles,

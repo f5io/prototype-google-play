@@ -36,12 +36,13 @@ function init() {
         lightView = $('[role="light"]')[0],
         mainView = $('[role="main"]')[0],
         cubeView = $('[role="cube"]')[0],
+        menuView = $('[role="menu"]')[0],
         loadView = $('[role="loader"]')[0],
         bgView = $('[role="background"]')[0];
 
     containerView.style[$.CSS_PERSPECTIVE] = CONTAINER_PERSPECTIVE + 'px';
 
-    var pre = Config.global.isCeltra ? 'http://labs.f5.io/essence/' : '';
+    var pre = Config.global.isCeltra ? Config.BASE_URL : '';
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
@@ -52,7 +53,31 @@ function init() {
         pre + 'assets/img/cubes/main/side3.jpg',
         pre + 'assets/img/cubes/main/side4.jpg',
         pre + 'assets/img/cubes/main/side5.jpg',
-        pre + 'assets/img/cubes/main/side6.jpg'
+        pre + 'assets/img/cubes/main/side6.jpg',
+        pre + 'assets/img/cubes/cube01/side1.jpg',
+        pre + 'assets/img/cubes/cube01/side2.jpg',
+        pre + 'assets/img/cubes/cube01/side3.jpg',
+        pre + 'assets/img/cubes/cube01/side4.jpg',
+        pre + 'assets/img/cubes/cube01/side5.jpg',
+        pre + 'assets/img/cubes/cube01/side6.jpg',
+        pre + 'assets/img/cubes/cube02/side1.jpg',
+        pre + 'assets/img/cubes/cube02/side2.jpg',
+        pre + 'assets/img/cubes/cube02/side3.jpg',
+        pre + 'assets/img/cubes/cube02/side4.jpg',
+        pre + 'assets/img/cubes/cube02/side5.jpg',
+        pre + 'assets/img/cubes/cube02/side6.jpg',
+        pre + 'assets/img/cubes/cube03/side1.jpg',
+        pre + 'assets/img/cubes/cube03/side2.jpg',
+        pre + 'assets/img/cubes/cube03/side3.jpg',
+        pre + 'assets/img/cubes/cube03/side4.jpg',
+        pre + 'assets/img/cubes/cube03/side5.jpg',
+        pre + 'assets/img/cubes/cube03/side6.jpg',
+        pre + 'assets/img/cubes/cube04/side1.jpg',
+        pre + 'assets/img/cubes/cube04/side2.jpg',
+        pre + 'assets/img/cubes/cube04/side3.jpg',
+        pre + 'assets/img/cubes/cube04/side4.jpg',
+        pre + 'assets/img/cubes/cube04/side5.jpg',
+        pre + 'assets/img/cubes/cube04/side6.jpg'
     ]).preload().then(function() {
 
         loadView.className = 'off';
@@ -62,7 +87,7 @@ function init() {
             bigcube, bigrot;
             
         /* Initialise the Debug Panel */
-        Debug.init();
+        // Debug.init();
 
         /* When the debug panel is open prevent pointer events on the main view */
         $.emitter.on('debug_panel', function(isOpen) {
@@ -83,6 +108,32 @@ function init() {
             initialiseBigCube();
         }
 
+        /* Define the Menu for the Play Experience here */
+        var cubeNames = ['cube01', 'cube02', 'cube03', 'cube04'],
+            cubeLabels = ['Apps', 'Music', 'Movies', 'Books'],
+            menuItems = [];
+
+        cubeNames.forEach(function(name, i) {
+            var el = document.createElement('div');
+            if (i === 0) el.className = 'selected';
+            el.setAttribute('cube', name);
+            el.style.width = 100 / cubeNames.length + 'vw';
+            el.innerText = cubeLabels[i];
+            
+            el.addEventListener('tap', function(e) {
+                if (e.target.className === 'selected') return;
+                menuItems.forEach(function(el) {
+                    el.className = '';
+                });
+                e.target.className = 'selected';
+                bigcube.changeCubeNameChangeInvisibleFacesAndRotate(name);
+            });
+            
+            menuItems.push(el);
+            menuView.appendChild(el);
+        });
+
+
         /* 
          * Subscribe to the `global_config_change` event, if the value of 
          * `useGamification` changes then we swap out the cubes.
@@ -91,7 +142,7 @@ function init() {
             if (key === 'useGamification') {
                 clearCube();
                 if (value) initialiseFourCubes();
-                else initialiseBigCube();
+                else initialiseBigCube(true);
             }
 
             // if (key === 'useAccelerometer') {
@@ -218,8 +269,9 @@ function init() {
                 var cubeContainer = $.getElement('div', 'cube-container', {}, {});
                 cubeView.appendChild(cubeContainer);
                 var cube = Object.create(Cube);
-                /* Use `cropLargeFaces` to remove the need for other assets */
-                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, { cropLargeFaces: true, castShadow: false });
+                
+
+                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, { matchSides: false, castShadow: false });
                 cubes[cube.id] = cube;
                 cube.element.style.left = $.isOdd(i + 1) ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
                 cube.element.style.top = i < 2 ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
@@ -231,7 +283,7 @@ function init() {
                 cube.render();
                 if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
 
-                animateCubeIn(cube, i);
+                animateCubeIn(cube, i, true);
                 configs.push(cube);
             }
 
@@ -247,20 +299,22 @@ function init() {
          *  initialiseBigCube - Initialises the single large cube and passes
          *  its config into the Debug panel.
          */
-        function initialiseBigCube() {
+        function initialiseBigCube(fromGame) {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
             bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'main', cubeContainer, {
-                useInertia: true,
+                useInertia: false,
                 useBackgrounds: true,
                 useContent: false,
-                isSequential: false,
+                isSequential: true,
                 normaliseFacialRotation: true
             });
             bigcube.rotation = bigrot || bigcube.rotation;
             bigcube.getNormalisedFaceRotation(bigcube.rotation, true);
             bigcube.render();
+
+            if (!fromGame) animateCubeIn(bigcube, 0);
 
             Debug.defineCubeProperties([bigcube]);
         }
@@ -278,26 +332,50 @@ function init() {
          *  @param {cube} - A Cube.
          *  @param {index} - The index of the Cube for sequential animation.
          */
-        function animateCubeIn(cube, index) {
+        function animateCubeIn(cube, index, randRot) {
             var container = cube.target,
                 numOfRotationsToDo = 3;
 
-            var from = -$.windowHeight(),
-                to = 0;
+            var noop = function() {};
 
-            container.style[$.CSS_TRANSFORM] += ' translateY(' + from + 'px)';
+            var tYStart = -$.windowHeight(),
+                tYEnd = 0;
+
+            var from, to;
+
+            if (!$.isDefined(randRot)) {
+                from = { ty: tYStart, scale: 0 };
+                to = { ty: tYEnd, scale: 1 };
+
+                cube.shadow.scale.X = cube.shadow.scale.Y = 0;
+                cube.shadow.render();
+
+            } else {
+                from = tYStart;
+                to = tYEnd;
+            }
+
+            container.style[$.CSS_TRANSFORM] += ' translateY(' + tYStart + 'px)';
 
             Interpol.tween()
                 .delay((4 - index) * 200)
                 .from(from)
                 .to(to)
-                .ease(Interpol.easing[index < 2 ? 'easeOutCirc' : 'easeOutBack'])
+                .ease(Interpol.easing[index < 2 && $.isDefined(randRot) ? 'easeOutCirc' : 'easeOutBack'])
                 .step(function(val) {
+                    var ty = 'ty' in val ? val.ty : val;
+                    var scale = 'scale' in val ? val.scale : undefined;
+
                     container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateY\(.+\)/g, function() {
-                        return 'translateY(' + val + 'px)';
+                        return 'translateY(' + ty + 'px)';
                     });
+
+                    if ($.isDefined(scale)) {
+                        cube.shadow.scale.X = cube.shadow.scale.Y = scale;
+                        cube.shadow.render();
+                    }
                 })
-                .complete(recursiveRotate)
+                .complete(randRot ? recursiveRotate : noop)
                 .start();
 
             function recursiveRotate() {
@@ -329,7 +407,6 @@ function init() {
                         oldV = val;
                     })
                     .complete(function(val) {
-                        //cube.rotation[axis] = $.norm($.nearest(val, 90) % 360);
                         if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
                         recursiveRotate();
                     })

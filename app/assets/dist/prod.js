@@ -20,8 +20,6 @@ var Background = require('./modules/background');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
-var Phone = require('./modules/phone');
-
 /* Import Libraries */
 var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
@@ -39,12 +37,13 @@ function init() {
         lightView = $('[role="light"]')[0],
         mainView = $('[role="main"]')[0],
         cubeView = $('[role="cube"]')[0],
+        menuView = $('[role="menu"]')[0],
         loadView = $('[role="loader"]')[0],
         bgView = $('[role="background"]')[0];
 
     containerView.style[$.CSS_PERSPECTIVE] = CONTAINER_PERSPECTIVE + 'px';
 
-    var pre = Config.global.isCeltra ? 'http://labs.f5.io/essence/' : '';
+    var pre = Config.global.isCeltra ? Config.BASE_URL : '';
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
@@ -55,37 +54,41 @@ function init() {
         pre + 'assets/img/cubes/main/side3.jpg',
         pre + 'assets/img/cubes/main/side4.jpg',
         pre + 'assets/img/cubes/main/side5.jpg',
-        pre + 'assets/img/cubes/main/side6.jpg'
+        pre + 'assets/img/cubes/main/side6.jpg',
+        pre + 'assets/img/cubes/cube01/side1.jpg',
+        pre + 'assets/img/cubes/cube01/side2.jpg',
+        pre + 'assets/img/cubes/cube01/side3.jpg',
+        pre + 'assets/img/cubes/cube01/side4.jpg',
+        pre + 'assets/img/cubes/cube01/side5.jpg',
+        pre + 'assets/img/cubes/cube01/side6.jpg',
+        pre + 'assets/img/cubes/cube02/side1.jpg',
+        pre + 'assets/img/cubes/cube02/side2.jpg',
+        pre + 'assets/img/cubes/cube02/side3.jpg',
+        pre + 'assets/img/cubes/cube02/side4.jpg',
+        pre + 'assets/img/cubes/cube02/side5.jpg',
+        pre + 'assets/img/cubes/cube02/side6.jpg',
+        pre + 'assets/img/cubes/cube03/side1.jpg',
+        pre + 'assets/img/cubes/cube03/side2.jpg',
+        pre + 'assets/img/cubes/cube03/side3.jpg',
+        pre + 'assets/img/cubes/cube03/side4.jpg',
+        pre + 'assets/img/cubes/cube03/side5.jpg',
+        pre + 'assets/img/cubes/cube03/side6.jpg',
+        pre + 'assets/img/cubes/cube04/side1.jpg',
+        pre + 'assets/img/cubes/cube04/side2.jpg',
+        pre + 'assets/img/cubes/cube04/side3.jpg',
+        pre + 'assets/img/cubes/cube04/side4.jpg',
+        pre + 'assets/img/cubes/cube04/side5.jpg',
+        pre + 'assets/img/cubes/cube04/side6.jpg'
     ]).preload().then(function() {
 
         loadView.className = 'off';
-
-        // var phone = Object.create(Phone);
-        // phone.init(phoneView);
-
-        // function runPhoneRot() {
-        //     Interpol.tween()
-        //         .duration(2200)
-        //         .ease(Interpol.easing.easeInOutSine)
-        //         .to(360)
-        //         .step(function(val) {
-        //             phone.rotation.Y = val;
-        //             phone.render();
-        //         })
-        //         .complete(runPhoneRot)
-        //         .start();
-        // }
-
-        // runPhoneRot();
-
-        // return;
 
         /* All assets are preloaded */
         var cubes = {}, shadow,
             bigcube, bigrot;
             
         /* Initialise the Debug Panel */
-        Debug.init();
+        // Debug.init();
 
         /* When the debug panel is open prevent pointer events on the main view */
         $.emitter.on('debug_panel', function(isOpen) {
@@ -106,6 +109,32 @@ function init() {
             initialiseBigCube();
         }
 
+        /* Define the Menu for the Play Experience here */
+        var cubeNames = ['cube01', 'cube02', 'cube03', 'cube04'],
+            cubeLabels = ['Apps', 'Music', 'Movies', 'Books'],
+            menuItems = [];
+
+        cubeNames.forEach(function(name, i) {
+            var el = document.createElement('div');
+            if (i === 0) el.className = 'selected';
+            el.setAttribute('cube', name);
+            el.style.width = 100 / cubeNames.length + 'vw';
+            el.innerText = cubeLabels[i];
+            
+            el.addEventListener('tap', function(e) {
+                if (e.target.className === 'selected') return;
+                menuItems.forEach(function(el) {
+                    el.className = '';
+                });
+                e.target.className = 'selected';
+                bigcube.changeCubeNameChangeInvisibleFacesAndRotate(name);
+            });
+            
+            menuItems.push(el);
+            menuView.appendChild(el);
+        });
+
+
         /* 
          * Subscribe to the `global_config_change` event, if the value of 
          * `useGamification` changes then we swap out the cubes.
@@ -114,7 +143,7 @@ function init() {
             if (key === 'useGamification') {
                 clearCube();
                 if (value) initialiseFourCubes();
-                else initialiseBigCube();
+                else initialiseBigCube(true);
             }
 
             // if (key === 'useAccelerometer') {
@@ -241,8 +270,9 @@ function init() {
                 var cubeContainer = $.getElement('div', 'cube-container', {}, {});
                 cubeView.appendChild(cubeContainer);
                 var cube = Object.create(Cube);
-                /* Use `cropLargeFaces` to remove the need for other assets */
-                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, { cropLargeFaces: true, castShadow: false });
+                
+
+                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, { matchSides: false, castShadow: false });
                 cubes[cube.id] = cube;
                 cube.element.style.left = $.isOdd(i + 1) ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
                 cube.element.style.top = i < 2 ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
@@ -254,7 +284,7 @@ function init() {
                 cube.render();
                 if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
 
-                animateCubeIn(cube, i);
+                animateCubeIn(cube, i, true);
                 configs.push(cube);
             }
 
@@ -270,20 +300,22 @@ function init() {
          *  initialiseBigCube - Initialises the single large cube and passes
          *  its config into the Debug panel.
          */
-        function initialiseBigCube() {
+        function initialiseBigCube(fromGame) {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
             bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'main', cubeContainer, {
-                useInertia: true,
+                useInertia: false,
                 useBackgrounds: true,
                 useContent: false,
-                isSequential: false,
+                isSequential: true,
                 normaliseFacialRotation: true
             });
             bigcube.rotation = bigrot || bigcube.rotation;
             bigcube.getNormalisedFaceRotation(bigcube.rotation, true);
             bigcube.render();
+
+            if (!fromGame) animateCubeIn(bigcube, 0);
 
             Debug.defineCubeProperties([bigcube]);
         }
@@ -301,26 +333,50 @@ function init() {
          *  @param {cube} - A Cube.
          *  @param {index} - The index of the Cube for sequential animation.
          */
-        function animateCubeIn(cube, index) {
+        function animateCubeIn(cube, index, randRot) {
             var container = cube.target,
                 numOfRotationsToDo = 3;
 
-            var from = -$.windowHeight(),
-                to = 0;
+            var noop = function() {};
 
-            container.style[$.CSS_TRANSFORM] += ' translateY(' + from + 'px)';
+            var tYStart = -$.windowHeight(),
+                tYEnd = 0;
+
+            var from, to;
+
+            if (!$.isDefined(randRot)) {
+                from = { ty: tYStart, scale: 0 };
+                to = { ty: tYEnd, scale: 1 };
+
+                cube.shadow.scale.X = cube.shadow.scale.Y = 0;
+                cube.shadow.render();
+
+            } else {
+                from = tYStart;
+                to = tYEnd;
+            }
+
+            container.style[$.CSS_TRANSFORM] += ' translateY(' + tYStart + 'px)';
 
             Interpol.tween()
                 .delay((4 - index) * 200)
                 .from(from)
                 .to(to)
-                .ease(Interpol.easing[index < 2 ? 'easeOutCirc' : 'easeOutBack'])
+                .ease(Interpol.easing[index < 2 && $.isDefined(randRot) ? 'easeOutCirc' : 'easeOutBack'])
                 .step(function(val) {
+                    var ty = 'ty' in val ? val.ty : val;
+                    var scale = 'scale' in val ? val.scale : undefined;
+
                     container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateY\(.+\)/g, function() {
-                        return 'translateY(' + val + 'px)';
+                        return 'translateY(' + ty + 'px)';
                     });
+
+                    if ($.isDefined(scale)) {
+                        cube.shadow.scale.X = cube.shadow.scale.Y = scale;
+                        cube.shadow.render();
+                    }
                 })
-                .complete(recursiveRotate)
+                .complete(randRot ? recursiveRotate : noop)
                 .start();
 
             function recursiveRotate() {
@@ -352,7 +408,6 @@ function init() {
                         oldV = val;
                     })
                     .complete(function(val) {
-                        //cube.rotation[axis] = $.norm($.nearest(val, 90) % 360);
                         if (cube.config.normaliseFacialRotation) cube.getNormalisedFaceRotation(cube.rotation);
                         recursiveRotate();
                     })
@@ -401,7 +456,7 @@ if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
     $.ready(init);
 }
 
-},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":51,"./modules/cube/shadow":53,"./modules/debug":55,"./modules/messaging":56,"./modules/orient":57,"./modules/phone":58,"./modules/utilities":59,"interpol":2,"stats":3}],2:[function(require,module,exports){
+},{"./modules/assetmanager":41,"./modules/background":45,"./modules/config":46,"./modules/cube":51,"./modules/cube/shadow":53,"./modules/debug":55,"./modules/messaging":56,"./modules/orient":57,"./modules/utilities":58,"interpol":2,"stats":3}],2:[function(require,module,exports){
 (function (global){
 ;__browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 (function(factory) {
@@ -6884,7 +6939,7 @@ Background.remove = function() {
 };
 
 module.exports = Background;
-},{"../assetmanager":41,"../config":46,"../utilities":59,"interpol":2}],46:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"interpol":2}],46:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Configuration
@@ -6894,6 +6949,8 @@ module.exports = Background;
 
 /* General Utilites */
 var $ = require('./utilities');
+
+var BASE_URL = 'http://labs.f5.io/essence/';
 
 var global = {};
 
@@ -6915,7 +6972,7 @@ var global = {};
 /* Initial global defaults */
 global.displayMetrics = false;
 global.useSound = true;
-global.useGamification = true;
+// global.useGamification = true;
 global.useAccelerometer = true;
 global.useDynamicLighting = true;
 
@@ -6976,12 +7033,13 @@ var descriptions = {
 
 /* Let's expose these objects */
 module.exports = {
+    BASE_URL: BASE_URL,
     global: global,
     cube: cube,
     titles: titles,
     descriptions: descriptions
 };
-},{"./utilities":59}],47:[function(require,module,exports){
+},{"./utilities":58}],47:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Component Base Class
@@ -7046,7 +7104,7 @@ var Common = {
 };
 
 module.exports = Common;
-},{"../utilities":59}],48:[function(require,module,exports){
+},{"../utilities":58}],48:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Content Matrix
@@ -7161,7 +7219,7 @@ var content = {
 };
 
 module.exports = content;
-},{"../../config":46,"../../messaging":56,"../../utilities":59}],49:[function(require,module,exports){
+},{"../../config":46,"../../messaging":56,"../../utilities":58}],49:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Face Class
@@ -7235,7 +7293,7 @@ Face.populateElement = function(elem) {
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
         var name = this.parent.config.cropLargeFaces ? 'main' : this.name;
-        var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+        var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
         var url = $.format(str, { i: this.index + 1, name: name });
         img.src = AssetManager.get(url).uri();
         img.width = this.width;
@@ -7310,7 +7368,7 @@ Face.render = function() {
 module.exports = Face;
 
 
-},{"../assetmanager":41,"../config":46,"../utilities":59,"./common":47,"./content":48}],50:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./common":47,"./content":48}],50:[function(require,module,exports){
 var $ = require('../utilities');
 var content = require('./content');
 var Config = require('../config');
@@ -7323,13 +7381,13 @@ var Interpol = require('interpol');
 
 var Fold = {
     init: function(cube, faceIndex) {
+        this.cube = cube;
         this.width = cube.width;
         this.height = cube.height;
         this.target = cube.target;
         this.faceIndex = faceIndex;
         this.cubeIndex = cube.index;
         this.cubeRotation = cube.rotation;
-        this.cube = cube;
         this.folds = [];
 
         var styles = {
@@ -7368,7 +7426,7 @@ var Fold = {
                 var fold = $.getElement('div', 'fold', {}, styles);
 
                 var img = new Image();
-                var str = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + content.background : content.background;
+                var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
                 var dict = { i : this.faceIndex + 1 };
                 dict.name = this.cube.config.cropLargeFaces ? 'main' : 'cube0' + (i + 1);
                 var src = $.format(str, dict);
@@ -7377,7 +7435,7 @@ var Fold = {
                 img.width = this.width;
                 img.height = this.height;
 
-                if (this.cube.config.cropLargeFaces) {
+                if (this.cube.config.cropLargeFaces || this.cube.config.matchSides === false) {
                     img.width *= 2;
                     img.height *= 2;
                     img.style.left = $.isOdd(i + 1) ? 0 : -this.width + 'px';
@@ -7408,7 +7466,7 @@ var Fold = {
 
             indexes.forEach(function(index, i, arr) {
                 var fold = _self.folds[index];
-                if (i === 0) {
+                if (i === 0 && _self.cube.config.matchSides !== false) {
                     fold.element.style[$.CSS_TRANSFORM] = 'rotate' + fold.axis + '(0deg)';
                     fold.shadow.style.opacity = 0;
                     return;
@@ -7416,6 +7474,10 @@ var Fold = {
 
                 var time = 200;
                 var delay = i * time;
+
+                if (i === 0) {
+                    delay = arr.length * time;
+                }
 
                 Interpol.tween()
                     .from(fold.start)
@@ -7448,7 +7510,8 @@ var Fold = {
                         }
                     })
                     .complete(function() {
-                        if (i === (arr.length - 1)) $.emitter.emit('fold_out_complete', _self.cubeRotation);
+                        var lenToCheck = _self.cube.config.matchSides === false ? 0 : arr.length - 1;
+                        if (i === lenToCheck) $.emitter.emit('fold_out_complete', _self.cubeRotation);
                     })
                     .start(function() {
                         $.emitter.emit('fold_out_start', index, time * 0.5);
@@ -7462,7 +7525,7 @@ var Fold = {
 };
 
 module.exports = Fold;
-},{"../assetmanager":41,"../config":46,"../utilities":59,"./content":48,"./vect3":54,"interpol":2}],51:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./content":48,"./vect3":54,"interpol":2}],51:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Class
@@ -7517,7 +7580,7 @@ Cube.init = function(width, height, index, name, target, config) {
     
     /* Get the `click.mp3` sound from the AssetManager */
     var soundUrl = 'assets/sound/click.mp3';
-    soundUrl = Config.global.isCeltra ? 'http://labs.f5.io/essence/' + soundUrl : soundUrl;
+    soundUrl = Config.global.isCeltra ? Config.BASE_URL + soundUrl : soundUrl;
     this.sound = AssetManager.get(soundUrl);
     
     this.currentContent = 0;
@@ -7613,6 +7676,7 @@ Cube.init = function(width, height, index, name, target, config) {
     this.rerenderFaces = renderFaces.bind(this, true);
     this.resetNormalisedFaces = resetNormalisedFaces;
     this.getAxisDefinition = getAxis;
+    this.changeCubeNameChangeInvisibleFacesAndRotate = changeCubeNameChangeInvisibleFacesAndRotate;
 
     /* Private variables */
     var startX, startY, startT,
@@ -8093,8 +8157,59 @@ Cube.init = function(width, height, index, name, target, config) {
      *  dispatchRotationComplete [private] - Publish a `rotation_complete` event if the Cube is `gamified`.
      */
     function dispatchRotationComplete() {
-        if (Config.global.useGamification) $.emitter.emit('rotation_complete');
+        if (Config.global.useGamification && _self.config.matchSides !== false) $.emitter.emit('rotation_complete');
     }
+
+    /*
+     *  changeCubeNameChangeInvisibleFacesAndRotate [private] - Change the cube name from outside of the Cube.
+     *  @param {name} - The new name of the cube and subsequent sides.
+     */
+    function changeCubeNameChangeInvisibleFacesAndRotate(name) {
+        var target = document.elementFromPoint($.windowWidth() / 2, $.windowHeight() / 2),
+            visibleSide = getFaceFromTarget(target);
+
+        _self.name = name;
+
+        _self.faces.map(function(face) {
+            face.name = name;
+            return face;
+        }).filter(function(face) {
+            return face.index !== visibleSide.index;
+        }).forEach(function(face) {
+            _self.currentContent = face.changeContent(0);
+        });
+
+        normaliseFaces(_self.rotation);
+
+        var axisDef = getAxis(_self.rotation),
+            startValue;
+
+        Interpol.tween()
+            .from(0)
+            .to(90)
+            .ease(Interpol.easing.easeOutCirc)
+            .step(function(val) {
+                _self.rotation[axisDef.LR] = startValue + val;
+                _self.render();
+            })
+            .complete(function() {
+                // if (!_self.config.isSequential) {
+                    _self.faces.forEach(function(face, i) {
+                        face.changeContent(i);
+                    });
+
+                    _self.rotation.X = _self.rotation.Y = _self.rotation.Z = 0;
+                    _self.render();
+                // }
+                normaliseFaces(_self.rotation);
+            })
+            .start(function() {
+                startValue = _self.rotation[axisDef.LR];
+            });
+    }
+
+
+
 };
 
 /*
@@ -8131,7 +8246,7 @@ Cube.render = function() {
 };
 
 module.exports = Cube;
-},{"../assetmanager":41,"../config":46,"../utilities":59,"./common":47,"./face":49,"./fold":50,"./matrix":52,"./shadow":53,"./vect3":54,"interpol":2}],52:[function(require,module,exports){
+},{"../assetmanager":41,"../config":46,"../utilities":58,"./common":47,"./face":49,"./fold":50,"./matrix":52,"./shadow":53,"./vect3":54,"interpol":2}],52:[function(require,module,exports){
 module.exports={
     "0" : {
         "0" : {
@@ -8841,7 +8956,7 @@ Shadow.render = function() {
 };
 
 module.exports = Shadow;
-},{"../config":46,"../utilities":59,"./common":47}],54:[function(require,module,exports){
+},{"../config":46,"../utilities":58,"./common":47}],54:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Vector3 Mathematics
@@ -9135,7 +9250,7 @@ module.exports = {
     init: init,
     defineCubeProperties: defineCubeProperties
 };
-},{"../config":46,"../utilities":59,"interpol":2,"stats":3}],56:[function(require,module,exports){
+},{"../config":46,"../utilities":58,"interpol":2,"stats":3}],56:[function(require,module,exports){
 var parentWindow,
     parentOrigin;
 
@@ -9232,83 +9347,7 @@ Orient.reset = function(fn) {
 
 
 module.exports = Orient;
-},{"../utilities":59,"interpol":2}],58:[function(require,module,exports){
-var $ = require('../utilities');
-var Vect3 = require('../cube/vect3');
-
-var Phone = {
-    init: function(elem) {
-        this.element = elem;
-        this.translate = { X : 0, Y : 0, Z : 0 };
-        this.rotation = { X : 0, Y : 0, Z : 0 };
-        this.scale = { X : 1, Y : 1 };
-        this.nextFaceIndex = 0;
-
-        /* Select the `light` from DOM */
-        this.light = $('[role="light"]')[0];
-        
-        /* The light never moves so define the `lightTransform` on `init` */
-        this.lightTransform = $.getTransform(this.light);
-
-        this.faces = $('.face', elem);
-        this.faceData = this.faces.map(function(face) {
-            var shadowSel = $('.shadow', face),
-                highlightSel = $('.highlight', face);
-
-            var obj = { face: face };
-            if (highlightSel.length) obj.highlight = highlightSel[0];
-            if (shadowSel.length) obj.shadow = shadowSel[0];
-
-            return obj;
-        }).map(function(obj) {
-            var verticies = $.computeVertexData(obj.face);
-            if ('highlight' in obj) obj.highlight.style.opacity = 0;
-            if ('shadow' in obj) obj.shadow.style.opacity = 0;
-            return $.extend(obj, {
-                verticies: verticies,
-                normal: Vect3.normalize(Vect3.cross(Vect3.sub(verticies.b, verticies.a), Vect3.sub(verticies.c, verticies.a))),
-                center: Vect3.divs(Vect3.sub(verticies.c, verticies.a), 2)
-            });
-        });
-
-        this.render();
-
-    },
-    render: function() {
-        this.element.style[$.CSS_TRANSFORM] = 'rotateX(' + this.rotation.X + 'deg) ' +
-            'rotateY(' + this.rotation.Y + 'deg) ' +
-            'rotateZ(' + this.rotation.Z + 'deg) ' +
-            'translateX(' + this.translate.X + 'px) ' +
-            'translateY(' + this.translate.Y + 'px) ' +
-            'translateZ(' + this.translate.Z + 'px) ' +
-            'scale(' + this.scale.X + ',' + this.scale.Y + ')';
-
-        /* Dynamic Lighting */
-        var face, direction, amount,
-            faceNum = 0, faceCount = this.faceData.length,
-            cubeTransform = $.getTransform(this.element),
-            lightPosition = Vect3.rotate(this.lightTransform.translate, Vect3.muls(cubeTransform.rotate, -1));
-
-        while (++faceNum < faceCount) {
-            face = this.faceData[this.nextFaceIndex];
-            direction = Vect3.normalize(Vect3.sub(lightPosition, face.center));
-            amount = 1 - Math.max(0, Vect3.dot(face.normal, direction)).toFixed(3);
-            if (face.light != amount) {
-                face.light = amount;
-                if ('shadow' in face) face.shadow.style.opacity = amount;
-                var val = 1 - (amount * 2);
-                if ('highlight' in face) {
-                    face.highlight.style.opacity = val;
-                    face.highlight.style[$.CSS_TRANSFORM] = 'translateZ(2px) scaleY(' + val * 1.2 + ')';
-                }
-            }
-            this.nextFaceIndex = (this.nextFaceIndex + 1) % faceCount;
-        }
-    }
-};
-
-module.exports = Phone;
-},{"../cube/vect3":54,"../utilities":59}],59:[function(require,module,exports){
+},{"../utilities":58,"interpol":2}],58:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Utilities

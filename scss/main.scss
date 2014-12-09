@@ -472,6 +472,26 @@ a {
 
 }
 
+[role="menu"] {
+	width: 100vw;
+	height: 8vh;
+	position: absolute;
+	bottom: 10vh;
+	background: green;
+
+	div {
+		//width: 25vw;
+		display: inline-block;
+		padding: 1em;
+		text-align: center;
+		height: 100%;
+
+		&.selected {
+			background: red;
+		}
+	}
+}
+
 [role="phone"] {
 	position: absolute;
 	width: 282px;
