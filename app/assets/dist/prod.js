@@ -7341,7 +7341,8 @@ Face.changeContent = function(index) {
 
     if (this.parent.config.useBackgrounds) {
         var img = $('img', this.element)[0];
-        var url = $.format(content.background, { i: index + 1, name: this.name });
+        var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
+        var url = $.format(str, { i: index + 1, name: this.name });
         img.src = AssetManager.get(url).uri();
     }
 
