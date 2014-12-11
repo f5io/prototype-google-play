@@ -139,7 +139,11 @@ function init() {
         cubeNames.forEach(function(name, i) {
             var el = document.createElement('div');
             var cls = i === 0 ? 'selected ' : '';
-            el.className = cls + cubeLabels[i].toLowerCase().split(' ')[0];
+            var shortName = cubeLabels[i].toLowerCase().split(' ')[0];
+            if (i === 0) {
+                document.body.style.background = 'url(' + AssetManager.get(pre + 'assets/img/play-bg-' + shortName + '.jpg').uri() + ') 0 0/cover';
+            }
+            el.className = cls + shortName;
             el.setAttribute('cube', name);
             el.style.width = (80 / cubeNames.length) - 1.5 + 'vw';
             el.innerText = cubeLabels[i];
@@ -149,7 +153,7 @@ function init() {
                 menuItems.forEach(function(el) {
                     el.classList.remove('selected');
                 });
-                document.body.className = e.target.className;
+                document.body.style.background = 'url(' + AssetManager.get(pre + 'assets/img/play-bg-' + shortName + '.jpg').uri() + ') 0 0/cover';
                 e.target.classList.add('selected');
                 bigcube.changeCubeNameChangeInvisibleFacesAndRotate(name);
             });

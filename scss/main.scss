@@ -49,28 +49,6 @@ html, body, [role="container"] {
 	font-family: Georgia, serif;
 }
 
-body {
-	&.apps {
-		background: url(../img/play-bg-apps.jpg);
-		background-size: cover;
-	}
-
-	&.books {
-		background: url(../img/play-bg-books.jpg);
-		background-size: cover;
-	}
-
-	&.music {
-		background: url(../img/play-bg-music.jpg);
-		background-size: cover;
-	}
-
-	&.movies {
-		background: url(../img/play-bg-movies.jpg);
-		background-size: cover;
-	}
-}
-
 a {
 	color: white;
 }
@@ -521,114 +499,123 @@ a {
 				vertical-align: middle;
 				width: 40px;
 				height: 40px;
+				position: absolute;
+
+				img {
+					width: 100%;
+					position: absolute;
+					top: 50%;
+					transform: translateY(-50%);
+					box-shadow: none;
+				}
 					
-				&.books {
-					&.n1 {
-						background: url(../img/content/numbers/book1.png) center center no-repeat;
-						background-size: contain;
-					}
+				// &.books {
+				// 	&.n1 {
+				// 		background: url(../img/content/numbers/book1.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n2 {
-						background: url(../img/content/numbers/book2.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n2 {
+				// 		background: url(../img/content/numbers/book2.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n3 {
-						background: url(../img/content/numbers/book3.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n3 {
+				// 		background: url(../img/content/numbers/book3.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n4 {
-						background: url(../img/content/numbers/book4.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n4 {
+				// 		background: url(../img/content/numbers/book4.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n5 {
-						background: url(../img/content/numbers/book5.png) center center no-repeat;
-						background-size: contain;
-					}
-				}
+				// 	&.n5 {
+				// 		background: url(../img/content/numbers/book5.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
+				// }
 
-				&.music {
-					&.n1 {
-						background: url(../img/content/numbers/music1.png) center center no-repeat;
-						background-size: contain;
-					}
+				// &.music {
+				// 	&.n1 {
+				// 		background: url(../img/content/numbers/music1.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n2 {
-						background: url(../img/content/numbers/music2.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n2 {
+				// 		background: url(../img/content/numbers/music2.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n3 {
-						background: url(../img/content/numbers/music3.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n3 {
+				// 		background: url(../img/content/numbers/music3.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n4 {
-						background: url(../img/content/numbers/music4.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n4 {
+				// 		background: url(../img/content/numbers/music4.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n5 {
-						background: url(../img/content/numbers/music5.png) center center no-repeat;
-						background-size: contain;
-					}
-				}
+				// 	&.n5 {
+				// 		background: url(../img/content/numbers/music5.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
+				// }
 
-				&.apps {
-					&.n1 {
-						background: url(../img/content/numbers/apps1.png) center center no-repeat;
-						background-size: contain;
-					}
+				// &.apps {
+				// 	&.n1 {
+				// 		background: url(../img/content/numbers/apps1.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n2 {
-						background: url(../img/content/numbers/apps2.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n2 {
+				// 		background: url(../img/content/numbers/apps2.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n3 {
-						background: url(../img/content/numbers/apps3.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n3 {
+				// 		background: url(../img/content/numbers/apps3.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n4 {
-						background: url(../img/content/numbers/apps4.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n4 {
+				// 		background: url(../img/content/numbers/apps4.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n5 {
-						background: url(../img/content/numbers/apps5.png) center center no-repeat;
-						background-size: contain;
-					}
-				}
+				// 	&.n5 {
+				// 		background: url(../img/content/numbers/apps5.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
+				// }
 
-				&.movies {
-					&.n1 {
-						background: url(../img/content/numbers/movies1.png) center center no-repeat;
-						background-size: contain;
-					}
+				// &.movies {
+				// 	&.n1 {
+				// 		background: url(../img/content/numbers/movies1.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n2 {
-						background: url(../img/content/numbers/movies2.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n2 {
+				// 		background: url(../img/content/numbers/movies2.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n3 {
-						background: url(../img/content/numbers/movies3.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n3 {
+				// 		background: url(../img/content/numbers/movies3.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n4 {
-						background: url(../img/content/numbers/movies4.png) center center no-repeat;
-						background-size: contain;
-					}
+				// 	&.n4 {
+				// 		background: url(../img/content/numbers/movies4.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
 
-					&.n5 {
-						background: url(../img/content/numbers/movies5.png) center center no-repeat;
-						background-size: contain;
-					}
-				}
+				// 	&.n5 {
+				// 		background: url(../img/content/numbers/movies5.png) center center no-repeat;
+				// 		background-size: contain;
+				// 	}
+				// }
 
 			}
 
