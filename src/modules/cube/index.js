@@ -107,6 +107,15 @@ Cube.init = function(width, height, index, name, target, config) {
             _self.faces.push(face);
         }
 
+        getFaceData();
+
+        if (useReset && oldRot) {
+            _self.rotation = oldRot;
+            _self.render();
+        }
+    }
+
+    function getFaceData() {
         /* Calculate the Vertex Data for the Faces for Dynamic Lighting */
         _self.faceData = _self.faces.map(function(face) {
             return $('.shadow', face.element)[0];
@@ -120,11 +129,6 @@ Cube.init = function(width, height, index, name, target, config) {
                 elem: elem
             };
         });
-
-        if (useReset && oldRot) {
-            _self.rotation = oldRot;
-            _self.render();
-        }
     }
 
     /* Call `renderFaces` on `init` */
@@ -654,29 +658,32 @@ Cube.init = function(width, height, index, name, target, config) {
         normaliseFaces(_self.rotation);
 
         var axisDef = getAxis(_self.rotation),
+            axis = $.range(0, 100) < 50 ? axisDef.UD : axisDef.LR,
+            amount = $.range(0, 100) < 50 ? 90 : -90,
             startValue;
 
         Interpol.tween()
             .from(0)
-            .to(90)
+            .to(amount)
             .ease(Interpol.easing.easeOutCirc)
             .step(function(val) {
-                _self.rotation[axisDef.LR] = startValue + val;
+                _self.rotation[axis] = startValue + val;
                 _self.render();
             })
             .complete(function() {
-                // if (!_self.config.isSequential) {
-                    _self.faces.forEach(function(face, i) {
-                        face.changeContent(i);
-                    });
+                _self.faces.forEach(function(face, i) {
+                    face.changeContent(i);
+                });
 
-                    _self.rotation.X = _self.rotation.Y = _self.rotation.Z = 0;
-                    _self.render();
-                // }
+                _self.rotation.X = _self.rotation.Y = _self.rotation.Z = 0;
+                _self.render();
+
+                getFaceData();
+
                 normaliseFaces(_self.rotation);
             })
             .start(function() {
-                startValue = _self.rotation[axisDef.LR];
+                startValue = _self.rotation[axis];
             });
     }
 

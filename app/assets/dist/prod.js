@@ -27,7 +27,7 @@ var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Sli
 function init() {
 
     /* Constants */
-    var CUBE_WIDTH = $.windowWidth() * 0.8, /*250,*/
+    var CUBE_WIDTH = Math.round($.windowWidth() * 0.8), /*250,*/
         HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
         CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50;
 
@@ -47,38 +47,61 @@ function init() {
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
+        pre + 'assets/img/play-apps.png',
+        pre + 'assets/img/play-books.png',
+        pre + 'assets/img/play-movies.png',
+        pre + 'assets/img/play-music.png',
+        pre + 'assets/img/play-bg-apps.jpg',
+        pre + 'assets/img/play-bg-books.jpg',
+        pre + 'assets/img/play-bg-movies.jpg',
+        pre + 'assets/img/play-bg-music.jpg',
+        pre + 'assets/img/play-logo-lockup.jpg',
+        pre + 'assets/img/side-apps.jpg',
+        pre + 'assets/img/side-books.jpg',
+        pre + 'assets/img/side-movies.jpg',
+        pre + 'assets/img/side-music.jpg',
         pre + 'assets/sound/click.mp3',
-        pre + 'assets/img/playlogo-sml.png',
-        pre + 'assets/img/cubes/main/side1.jpg',
-        pre + 'assets/img/cubes/main/side2.jpg',
-        pre + 'assets/img/cubes/main/side3.jpg',
-        pre + 'assets/img/cubes/main/side4.jpg',
-        pre + 'assets/img/cubes/main/side5.jpg',
-        pre + 'assets/img/cubes/main/side6.jpg',
-        pre + 'assets/img/cubes/cube01/side1.jpg',
-        pre + 'assets/img/cubes/cube01/side2.jpg',
-        pre + 'assets/img/cubes/cube01/side3.jpg',
-        pre + 'assets/img/cubes/cube01/side4.jpg',
-        pre + 'assets/img/cubes/cube01/side5.jpg',
-        pre + 'assets/img/cubes/cube01/side6.jpg',
-        pre + 'assets/img/cubes/cube02/side1.jpg',
-        pre + 'assets/img/cubes/cube02/side2.jpg',
-        pre + 'assets/img/cubes/cube02/side3.jpg',
-        pre + 'assets/img/cubes/cube02/side4.jpg',
-        pre + 'assets/img/cubes/cube02/side5.jpg',
-        pre + 'assets/img/cubes/cube02/side6.jpg',
-        pre + 'assets/img/cubes/cube03/side1.jpg',
-        pre + 'assets/img/cubes/cube03/side2.jpg',
-        pre + 'assets/img/cubes/cube03/side3.jpg',
-        pre + 'assets/img/cubes/cube03/side4.jpg',
-        pre + 'assets/img/cubes/cube03/side5.jpg',
-        pre + 'assets/img/cubes/cube03/side6.jpg',
-        pre + 'assets/img/cubes/cube04/side1.jpg',
-        pre + 'assets/img/cubes/cube04/side2.jpg',
-        pre + 'assets/img/cubes/cube04/side3.jpg',
-        pre + 'assets/img/cubes/cube04/side4.jpg',
-        pre + 'assets/img/cubes/cube04/side5.jpg',
-        pre + 'assets/img/cubes/cube04/side6.jpg'
+        pre + 'assets/img/content/covers/apps1.png',
+        pre + 'assets/img/content/covers/apps2.png',
+        pre + 'assets/img/content/covers/apps3.png',
+        pre + 'assets/img/content/covers/apps4.png',
+        pre + 'assets/img/content/covers/apps5.png',
+        pre + 'assets/img/content/covers/book1.jpg',
+        pre + 'assets/img/content/covers/book2.jpg',
+        pre + 'assets/img/content/covers/book3.jpg',
+        pre + 'assets/img/content/covers/book4.jpg',
+        pre + 'assets/img/content/covers/book5.jpg',
+        pre + 'assets/img/content/covers/movies1.jpg',
+        pre + 'assets/img/content/covers/movies2.jpg',
+        pre + 'assets/img/content/covers/movies3.jpg',
+        pre + 'assets/img/content/covers/movies4.jpg',
+        pre + 'assets/img/content/covers/movies5.jpg',
+        pre + 'assets/img/content/covers/music1.jpg',
+        pre + 'assets/img/content/covers/music2.jpg',
+        pre + 'assets/img/content/covers/music3.jpg',
+        pre + 'assets/img/content/covers/music4.jpg',
+        pre + 'assets/img/content/covers/music5.jpg',
+        pre + 'assets/img/content/numbers/apps1.png',
+        pre + 'assets/img/content/numbers/apps2.png',
+        pre + 'assets/img/content/numbers/apps3.png',
+        pre + 'assets/img/content/numbers/apps4.png',
+        pre + 'assets/img/content/numbers/apps5.png',
+        pre + 'assets/img/content/numbers/book1.png',
+        pre + 'assets/img/content/numbers/book2.png',
+        pre + 'assets/img/content/numbers/book3.png',
+        pre + 'assets/img/content/numbers/book4.png',
+        pre + 'assets/img/content/numbers/book5.png',
+        pre + 'assets/img/content/numbers/movies1.png',
+        pre + 'assets/img/content/numbers/movies2.png',
+        pre + 'assets/img/content/numbers/movies3.png',
+        pre + 'assets/img/content/numbers/movies4.png',
+        pre + 'assets/img/content/numbers/movies5.png',
+        pre + 'assets/img/content/numbers/music1.png',
+        pre + 'assets/img/content/numbers/music2.png',
+        pre + 'assets/img/content/numbers/music3.png',
+        pre + 'assets/img/content/numbers/music4.png',
+        pre + 'assets/img/content/numbers/music5.png',
+        pre + 'assets/img/content/stars.png'
     ]).preload().then(function() {
 
         loadView.className = 'off';
@@ -111,22 +134,24 @@ function init() {
 
         /* Define the Menu for the Play Experience here */
         var cubeNames = ['cube01', 'cube02', 'cube03', 'cube04'],
-            cubeLabels = ['Apps', 'Music', 'Movies', 'Books'],
+            cubeLabels = ['Music', 'Books', 'Apps', 'Movies & TV'],
             menuItems = [];
 
         cubeNames.forEach(function(name, i) {
             var el = document.createElement('div');
-            if (i === 0) el.className = 'selected';
+            var cls = i === 0 ? 'selected ' : '';
+            el.className = cls + cubeLabels[i].toLowerCase().split(' ')[0];
             el.setAttribute('cube', name);
-            el.style.width = 100 / cubeNames.length + 'vw';
+            el.style.width = (80 / cubeNames.length) - 1.5 + 'vw';
             el.innerText = cubeLabels[i];
             
             el.addEventListener('tap', function(e) {
-                if (e.target.className === 'selected') return;
+                if (e.target.classList.contains('selected')) return;
                 menuItems.forEach(function(el) {
-                    el.className = '';
+                    el.classList.remove('selected');
                 });
-                e.target.className = 'selected';
+                document.body.className = e.target.className;
+                e.target.classList.add('selected');
                 bigcube.changeCubeNameChangeInvisibleFacesAndRotate(name);
             });
             
@@ -304,10 +329,10 @@ function init() {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
-            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'main', cubeContainer, {
+            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'cube01', cubeContainer, {
                 useInertia: false,
-                useBackgrounds: true,
-                useContent: false,
+                useBackgrounds: false,
+                useContent: true,
                 isSequential: true,
                 normaliseFacialRotation: true
             });
@@ -7119,103 +7144,404 @@ var Messaging = require('../../messaging');
 
 var content = {
 	background : 'assets/img/cubes/{name}/side{i}.jpg', /* Background Image unformatted string */
-	sides : [ /* Array of sides with `html` and `onload` functions */
-		{
-			html: function(cfg) {
-				return (cfg.useGif ? '<img class="gif" src="assets/img/tes.gif" width="100%" height="100%" /></span><span>' : '') +
-					'<p>Side 1.</p>' +
-					'<button>Link out</button>';
+	sides : {
+		/* MUSIC */
+		cube01 : [ /* Array of sides with `html` and `onload` functions */
+			{
+				html: function(cfg) {
+					return '<img class="logo" src="assets/img/side-music.jpg"/>';
+				},
+				onload: function(el, cfg) {}
 			},
-			onload: function(el, cfg) {
-				$('button', el).forEach(function(btn) {
-					btn.addEventListener('click', function(e) {
-						if (Config.global.useMessaging) Messaging.post('btn_interaction');
-					});
-
-					if (cfg.useGif) {
-						$('.gif', el).forEach(function(gif) {
-							gif.addEventListener('touchmove', $.prevent);
-						});
-					}
-				});
-			}
-		},
-		{
-			html: function(cfg) {
-				return (cfg.useVideo ? '<h1>Video</h1><div class="vid"><video src="assets/video/test.mp4" width="100%" height="100%" style="display: none;"></video></div>' : '<p>Side 2.</p>' +
-					'<button>Click me</button>');
+			{
+				html: function(cfg) {
+					return '<div class="title n5">' +
+								'<span class="number music n5">5</span>' +
+								'<h1>In the Silence (Deluxe Edition)</h1>' +
+							'</div>' +
+							'<div class="content-below music">' +
+								'<img src="assets/img/content/covers/music5.jpg" />' +
+								'<div class="content-actual music">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Pop</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
 			},
-			onload: function(el, cfg) {
-				$('button', el).forEach(function(btn) {
-					btn.addEventListener('click', function(e) {
-						if (Config.global.useMessaging) Messaging.post('btn_interaction');
-					});
-				});
-
-				if (cfg.useVideo) {
-					$('.vid', el).forEach(function(vid) {
-						vid.addEventListener('click', function(e) {
-							var video = $('video', vid)[0];
-							video.style.display = 'block';
-							video.play();
-						});
-					});
-				}
-			}
-		},
-		{
-			html: function(cfg) {
-				return '<p>Side 3.</p>' +
-					'<button>Click me</button>';
+			{
+				html: function(cfg) {
+					return '<div class="title n4">' +
+								'<span class="number music n4">4</span>' +
+								'<h1>BBC Music Awards</h1>' +
+							'</div>' +
+							'<div class="content-below music">' +
+								'<img src="assets/img/content/covers/music4.jpg" />' +
+								'<div class="content-actual music">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Pop</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
 			},
-			onload: function(el, cfg) {
-				$('button', el).forEach(function(btn) {
-					btn.addEventListener('click', function(e) {
-						if (Config.global.useMessaging) Messaging.post('btn_interaction');
-					});
-				});
-			}
-		},
-		{
-			html: function(cfg) {
-				return '<p>Side 4.</p>' +
-					'<button>Click me</button>';
+			{
+				html: function(cfg) {
+					return '<div class="title n3">' +
+								'<span class="number music n3">3</span>' +
+								'<h1>Reclassified</h1>' +
+							'</div>' +
+							'<div class="content-below music">' +
+								'<img src="assets/img/content/covers/music3.jpg" />' +
+								'<div class="content-actual music">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Pop</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
 			},
-			onload: function(el, cfg) {
-				$('button', el).forEach(function(btn) {
-					btn.addEventListener('click', function(e) {
-						if (Config.global.useMessaging) Messaging.post('btn_interaction');
-					});
-				});
-			}
-		},
-		{
-			html: function(cfg) {
-				return '<p>Side 5.</p>' +
-					'<button>Click me</button>';
+			{
+				html: function(cfg) {
+					return '<div class="title n2">' +
+								'<span class="number music n2">2</span>' +
+								'<h1>III (Deluxe)</h1>' +
+							'</div>' +
+							'<div class="content-below music">' +
+								'<img src="assets/img/content/covers/music2.jpg" />' +
+								'<div class="content-actual music">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Pop</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
 			},
-			onload: function(el, cfg) {
-				$('button', el).forEach(function(btn) {
-					btn.addEventListener('click', function(e) {
-						if (Config.global.useMessaging) Messaging.post('btn_interaction');
-					});
-				});
+			{
+				html: function(cfg) {
+					return '<div class="title n1">' +
+								'<span class="number music n1">1</span>' +
+								'<h1>Bastille vs. Other People\'s Heartache</h1>' +
+							'</div>' +
+							'<div class="content-below music">' +
+								'<img src="assets/img/content/covers/music1.jpg" />' +
+								'<div class="content-actual music">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Alternative</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
 			}
-		},
-		{
-			html: function(cfg) {
-				return '<p>Side 6.</p>' +
-					'<button>Click me</button>';
+		],
+		/* BOOKS */
+		cube02 : [ /* Array of sides with `html` and `onload` functions */
+			{
+				html: function(cfg) {
+					return '<img class="logo" src="assets/img/side-books.jpg"/>';
+				},
+				onload: function(el, cfg) {}
 			},
-			onload: function(el, cfg) {
-				$('button', el).forEach(function(btn) {
-					btn.addEventListener('click', function(e) {
-						if (Config.global.useMessaging) Messaging.post('btn_interaction');
-					});
-				});
+			{
+				html: function(cfg) {
+					return '<div class="title n5">' +
+								'<span class="number books n5">5</span>' +
+								'<h1>The Fault in Our Stars</h1>' +
+							'</div>' +
+							'<div class="content-below books">' +
+								'<img src="assets/img/content/covers/book5.jpg" />' +
+								'<div class="content-actual books">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>John Green</strong> - 3 May 2010</p>' +
+									'<button class="buy">£3.66</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n4">' +
+								'<span class="number books n4">4</span>' +
+								'<h1>Nikola Tesla: Imagination...</h1>' +
+							'</div>' +
+							'<div class="content-below books">' +
+								'<img src="assets/img/content/covers/book4.jpg" />' +
+								'<div class="content-actual books">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Sean Patrick</strong> - 21 Jun 2014</p>' +
+									'<button class="buy">£3.66</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n3">' +
+								'<span class="number books n3">3</span>' +
+								'<h1>Tell No One</h1>' +
+							'</div>' +
+							'<div class="content-below books">' +
+								'<img src="assets/img/content/covers/book3.jpg" />' +
+								'<div class="content-actual books">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Harlan Coben</strong> - 15 May 2011</p>' +
+									'<button class="buy">£3.66</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n2">' +
+								'<span class="number books n2">2</span>' +
+								'<h1>Where There\'s Smoke</h1>' +
+							'</div>' +
+							'<div class="content-below books">' +
+								'<img src="assets/img/content/covers/book2.jpg" />' +
+								'<div class="content-actual books">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Jodi Picoult</strong> - 20 Nov 2014</p>' +
+									'<button class="buy">£3.66</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n1">' +
+								'<span class="number books n1">1</span>' +
+								'<h1>Christmas at the Cupcake Cafe</h1>' +
+							'</div>' +
+							'<div class="content-below books">' +
+								'<img src="assets/img/content/covers/book1.jpg" />' +
+								'<div class="content-actual books">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Jenny Colgan</strong> - 25 Oct 2012</p>' +
+									'<button class="buy">£3.66</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
 			}
-		}
-	]
+		],
+		/* APPS */
+		cube03 : [ /* Array of sides with `html` and `onload` functions */
+			{
+				html: function(cfg) {
+					return '<img class="logo" src="assets/img/side-apps.jpg"/>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n5">' +
+								'<span class="number apps n5">5</span>' +
+								'<h1>Soundcloud - Music and Audio</h1>' +
+							'</div>' +
+							'<div class="content-below apps">' +
+								'<img src="assets/img/content/covers/apps5.png" />' +
+								'<div class="content-actual apps">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Music</strong> - 12 May 2012</p>' +
+									'<button class="buy">Install</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n4">' +
+								'<span class="number apps n4">4</span>' +
+								'<h1>Twitter</h1>' +
+							'</div>' +
+							'<div class="content-below apps">' +
+								'<img src="assets/img/content/covers/apps4.png" />' +
+								'<div class="content-actual apps">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Communication</strong> - 16 Apr 2014</p>' +
+									'<button class="buy">Install</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n3">' +
+								'<span class="number apps n3">3</span>' +
+								'<h1>Chrome Browser - Google</h1>' +
+							'</div>' +
+							'<div class="content-below apps">' +
+								'<img src="assets/img/content/covers/apps3.png" />' +
+								'<div class="content-actual apps">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Communication</strong> - 30 Aug 2009</p>' +
+									'<button class="buy">Install</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n2">' +
+								'<span class="number apps n2">2</span>' +
+								'<h1>Skype</h1>' +
+							'</div>' +
+							'<div class="content-below apps">' +
+								'<img src="assets/img/content/covers/apps2.png" />' +
+								'<div class="content-actual apps">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Communication</strong> - 30 Aug 2009</p>' +
+									'<button class="buy">Install</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n1">' +
+								'<span class="number apps n1">1</span>' +
+								'<h1>Instagram</h1>' +
+							'</div>' +
+							'<div class="content-below apps">' +
+								'<img src="assets/img/content/covers/apps1.png" />' +
+								'<div class="content-actual apps">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Social</strong> - 3 May 2010</p>' +
+									'<button class="buy">Install</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			}
+		],
+		/* MOVIES */
+		cube04 : [ /* Array of sides with `html` and `onload` functions */
+			{
+				html: function(cfg) {
+					return '<img class="logo" src="assets/img/side-movies.jpg"/>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n5">' +
+								'<span class="number movies n5">5</span>' +
+								'<h1>Gods Pocket</h1>' +
+							'</div>' +
+							'<div class="content-below movies">' +
+								'<img src="assets/img/content/covers/movies5.jpg" />' +
+								'<div class="content-actual movies">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Drama</strong> - Oct 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n4">' +
+								'<span class="number movies n4">4</span>' +
+								'<h1>Dawn of the Planet of the Apes</h1>' +
+							'</div>' +
+							'<div class="content-below movies">' +
+								'<img src="assets/img/content/covers/movies4.jpg" />' +
+								'<div class="content-actual movies">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Action</strong> - Sep 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n3">' +
+								'<span class="number movies n3">3</span>' +
+								'<h1>By the Gun</h1>' +
+							'</div>' +
+							'<div class="content-below movies">' +
+								'<img src="assets/img/content/covers/movies3.jpg" />' +
+								'<div class="content-actual movies">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Drama</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n2">' +
+								'<span class="number movies n2">2</span>' +
+								'<h1>I am Ali</h1>' +
+							'</div>' +
+							'<div class="content-below movies">' +
+								'<img src="assets/img/content/covers/movies2.jpg" />' +
+								'<div class="content-actual movies">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Drama</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			},
+			{
+				html: function(cfg) {
+					return '<div class="title n1">' +
+								'<span class="number movies n1">1</span>' +
+								'<h1>The Inbetweeners Movie 2</h1>' +
+							'</div>' +
+							'<div class="content-below movies">' +
+								'<img src="assets/img/content/covers/movies1.jpg" />' +
+								'<div class="content-actual movies">' +
+									'<p>Lorem ipsum dolor sit et, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore etam dolore magna aliqua.</p>' +
+									'<p class="author"><strong>Comedy</strong> - Aug 2014</p>' +
+									'<button class="buy">£9.99 Buy</button>' +
+									'<div class="stars"></div>' +
+								'</div>' +
+							'</div>';
+				},
+				onload: function(el, cfg) {}
+			}
+		]
+	}
 };
 
 module.exports = content;
@@ -7288,7 +7614,7 @@ Face.getElement = function() {
  *  @return {HTMLElement} - The populated HTML Element.
  */
 Face.populateElement = function(elem) {
-    var c = content.sides[this.index];
+    var c = content.sides[this.name][this.index];
     
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
@@ -7336,8 +7662,8 @@ Face.populateElement = function(elem) {
  *  @return {integer} - The index transformed accordingly for Matrix length.
  */
 Face.changeContent = function(index) {
-    index = index >= content.sides.length ? 0 : index;
-    var c = content.sides[index];
+    index = index >= content.sides[this.name].length ? 0 : index;
+    var c = content.sides[this.name][index];
 
     if (this.parent.config.useBackgrounds) {
         var img = $('img', this.element)[0];
@@ -7636,6 +7962,15 @@ Cube.init = function(width, height, index, name, target, config) {
             _self.faces.push(face);
         }
 
+        getFaceData();
+
+        if (useReset && oldRot) {
+            _self.rotation = oldRot;
+            _self.render();
+        }
+    }
+
+    function getFaceData() {
         /* Calculate the Vertex Data for the Faces for Dynamic Lighting */
         _self.faceData = _self.faces.map(function(face) {
             return $('.shadow', face.element)[0];
@@ -7649,11 +7984,6 @@ Cube.init = function(width, height, index, name, target, config) {
                 elem: elem
             };
         });
-
-        if (useReset && oldRot) {
-            _self.rotation = oldRot;
-            _self.render();
-        }
     }
 
     /* Call `renderFaces` on `init` */
@@ -8183,29 +8513,32 @@ Cube.init = function(width, height, index, name, target, config) {
         normaliseFaces(_self.rotation);
 
         var axisDef = getAxis(_self.rotation),
+            axis = $.range(0, 100) < 50 ? axisDef.UD : axisDef.LR,
+            amount = $.range(0, 100) < 50 ? 90 : -90,
             startValue;
 
         Interpol.tween()
             .from(0)
-            .to(90)
+            .to(amount)
             .ease(Interpol.easing.easeOutCirc)
             .step(function(val) {
-                _self.rotation[axisDef.LR] = startValue + val;
+                _self.rotation[axis] = startValue + val;
                 _self.render();
             })
             .complete(function() {
-                // if (!_self.config.isSequential) {
-                    _self.faces.forEach(function(face, i) {
-                        face.changeContent(i);
-                    });
+                _self.faces.forEach(function(face, i) {
+                    face.changeContent(i);
+                });
 
-                    _self.rotation.X = _self.rotation.Y = _self.rotation.Z = 0;
-                    _self.render();
-                // }
+                _self.rotation.X = _self.rotation.Y = _self.rotation.Z = 0;
+                _self.render();
+
+                getFaceData();
+
                 normaliseFaces(_self.rotation);
             })
             .start(function() {
-                startValue = _self.rotation[axisDef.LR];
+                startValue = _self.rotation[axis];
             });
     }
 

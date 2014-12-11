@@ -26,7 +26,7 @@ var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Sli
 function init() {
 
     /* Constants */
-    var CUBE_WIDTH = $.windowWidth() * 0.8, /*250,*/
+    var CUBE_WIDTH = Math.round($.windowWidth() * 0.8), /*250,*/
         HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
         CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50;
 
@@ -46,38 +46,61 @@ function init() {
     
     /* Let's preload all the assets we are going to need */
     AssetManager.add([
+        pre + 'assets/img/play-apps.png',
+        pre + 'assets/img/play-books.png',
+        pre + 'assets/img/play-movies.png',
+        pre + 'assets/img/play-music.png',
+        pre + 'assets/img/play-bg-apps.jpg',
+        pre + 'assets/img/play-bg-books.jpg',
+        pre + 'assets/img/play-bg-movies.jpg',
+        pre + 'assets/img/play-bg-music.jpg',
+        pre + 'assets/img/play-logo-lockup.jpg',
+        pre + 'assets/img/side-apps.jpg',
+        pre + 'assets/img/side-books.jpg',
+        pre + 'assets/img/side-movies.jpg',
+        pre + 'assets/img/side-music.jpg',
         pre + 'assets/sound/click.mp3',
-        pre + 'assets/img/playlogo-sml.png',
-        pre + 'assets/img/cubes/main/side1.jpg',
-        pre + 'assets/img/cubes/main/side2.jpg',
-        pre + 'assets/img/cubes/main/side3.jpg',
-        pre + 'assets/img/cubes/main/side4.jpg',
-        pre + 'assets/img/cubes/main/side5.jpg',
-        pre + 'assets/img/cubes/main/side6.jpg',
-        pre + 'assets/img/cubes/cube01/side1.jpg',
-        pre + 'assets/img/cubes/cube01/side2.jpg',
-        pre + 'assets/img/cubes/cube01/side3.jpg',
-        pre + 'assets/img/cubes/cube01/side4.jpg',
-        pre + 'assets/img/cubes/cube01/side5.jpg',
-        pre + 'assets/img/cubes/cube01/side6.jpg',
-        pre + 'assets/img/cubes/cube02/side1.jpg',
-        pre + 'assets/img/cubes/cube02/side2.jpg',
-        pre + 'assets/img/cubes/cube02/side3.jpg',
-        pre + 'assets/img/cubes/cube02/side4.jpg',
-        pre + 'assets/img/cubes/cube02/side5.jpg',
-        pre + 'assets/img/cubes/cube02/side6.jpg',
-        pre + 'assets/img/cubes/cube03/side1.jpg',
-        pre + 'assets/img/cubes/cube03/side2.jpg',
-        pre + 'assets/img/cubes/cube03/side3.jpg',
-        pre + 'assets/img/cubes/cube03/side4.jpg',
-        pre + 'assets/img/cubes/cube03/side5.jpg',
-        pre + 'assets/img/cubes/cube03/side6.jpg',
-        pre + 'assets/img/cubes/cube04/side1.jpg',
-        pre + 'assets/img/cubes/cube04/side2.jpg',
-        pre + 'assets/img/cubes/cube04/side3.jpg',
-        pre + 'assets/img/cubes/cube04/side4.jpg',
-        pre + 'assets/img/cubes/cube04/side5.jpg',
-        pre + 'assets/img/cubes/cube04/side6.jpg'
+        pre + 'assets/img/content/covers/apps1.png',
+        pre + 'assets/img/content/covers/apps2.png',
+        pre + 'assets/img/content/covers/apps3.png',
+        pre + 'assets/img/content/covers/apps4.png',
+        pre + 'assets/img/content/covers/apps5.png',
+        pre + 'assets/img/content/covers/book1.jpg',
+        pre + 'assets/img/content/covers/book2.jpg',
+        pre + 'assets/img/content/covers/book3.jpg',
+        pre + 'assets/img/content/covers/book4.jpg',
+        pre + 'assets/img/content/covers/book5.jpg',
+        pre + 'assets/img/content/covers/movies1.jpg',
+        pre + 'assets/img/content/covers/movies2.jpg',
+        pre + 'assets/img/content/covers/movies3.jpg',
+        pre + 'assets/img/content/covers/movies4.jpg',
+        pre + 'assets/img/content/covers/movies5.jpg',
+        pre + 'assets/img/content/covers/music1.jpg',
+        pre + 'assets/img/content/covers/music2.jpg',
+        pre + 'assets/img/content/covers/music3.jpg',
+        pre + 'assets/img/content/covers/music4.jpg',
+        pre + 'assets/img/content/covers/music5.jpg',
+        pre + 'assets/img/content/numbers/apps1.png',
+        pre + 'assets/img/content/numbers/apps2.png',
+        pre + 'assets/img/content/numbers/apps3.png',
+        pre + 'assets/img/content/numbers/apps4.png',
+        pre + 'assets/img/content/numbers/apps5.png',
+        pre + 'assets/img/content/numbers/book1.png',
+        pre + 'assets/img/content/numbers/book2.png',
+        pre + 'assets/img/content/numbers/book3.png',
+        pre + 'assets/img/content/numbers/book4.png',
+        pre + 'assets/img/content/numbers/book5.png',
+        pre + 'assets/img/content/numbers/movies1.png',
+        pre + 'assets/img/content/numbers/movies2.png',
+        pre + 'assets/img/content/numbers/movies3.png',
+        pre + 'assets/img/content/numbers/movies4.png',
+        pre + 'assets/img/content/numbers/movies5.png',
+        pre + 'assets/img/content/numbers/music1.png',
+        pre + 'assets/img/content/numbers/music2.png',
+        pre + 'assets/img/content/numbers/music3.png',
+        pre + 'assets/img/content/numbers/music4.png',
+        pre + 'assets/img/content/numbers/music5.png',
+        pre + 'assets/img/content/stars.png'
     ]).preload().then(function() {
 
         loadView.className = 'off';
@@ -110,22 +133,24 @@ function init() {
 
         /* Define the Menu for the Play Experience here */
         var cubeNames = ['cube01', 'cube02', 'cube03', 'cube04'],
-            cubeLabels = ['Apps', 'Music', 'Movies', 'Books'],
+            cubeLabels = ['Music', 'Books', 'Apps', 'Movies & TV'],
             menuItems = [];
 
         cubeNames.forEach(function(name, i) {
             var el = document.createElement('div');
-            if (i === 0) el.className = 'selected';
+            var cls = i === 0 ? 'selected ' : '';
+            el.className = cls + cubeLabels[i].toLowerCase().split(' ')[0];
             el.setAttribute('cube', name);
-            el.style.width = 100 / cubeNames.length + 'vw';
+            el.style.width = (80 / cubeNames.length) - 1.5 + 'vw';
             el.innerText = cubeLabels[i];
             
             el.addEventListener('tap', function(e) {
-                if (e.target.className === 'selected') return;
+                if (e.target.classList.contains('selected')) return;
                 menuItems.forEach(function(el) {
-                    el.className = '';
+                    el.classList.remove('selected');
                 });
-                e.target.className = 'selected';
+                document.body.className = e.target.className;
+                e.target.classList.add('selected');
                 bigcube.changeCubeNameChangeInvisibleFacesAndRotate(name);
             });
             
@@ -303,10 +328,10 @@ function init() {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
-            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'main', cubeContainer, {
+            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'cube01', cubeContainer, {
                 useInertia: false,
-                useBackgrounds: true,
-                useContent: false,
+                useBackgrounds: false,
+                useContent: true,
                 isSequential: true,
                 normaliseFacialRotation: true
             });

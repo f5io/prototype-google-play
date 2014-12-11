@@ -66,7 +66,7 @@ Face.getElement = function() {
  *  @return {HTMLElement} - The populated HTML Element.
  */
 Face.populateElement = function(elem) {
-    var c = content.sides[this.index];
+    var c = content.sides[this.name][this.index];
     
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
@@ -114,8 +114,8 @@ Face.populateElement = function(elem) {
  *  @return {integer} - The index transformed accordingly for Matrix length.
  */
 Face.changeContent = function(index) {
-    index = index >= content.sides.length ? 0 : index;
-    var c = content.sides[index];
+    index = index >= content.sides[this.name].length ? 0 : index;
+    var c = content.sides[this.name][index];
 
     if (this.parent.config.useBackgrounds) {
         var img = $('img', this.element)[0];
