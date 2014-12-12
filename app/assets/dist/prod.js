@@ -8040,6 +8040,7 @@ Cube.init = function(width, height, index, name, target, config) {
     this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
     this.element.addEventListener('touchstart', touchStart);
 
+    /* Double tap to fold out mechanic if the we are gamifying the experience */
     if (Config.global.useGamification) {
         this.element.addEventListener('doubletap', function(e) {
             var face = getFaceFromTarget(e.target);
