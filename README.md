@@ -12,10 +12,11 @@ This will start a server running on `localhost` on port `4000`.
 
 ### Branches
 
-There are currently 3 branches to this repo:
+There are currently 4 branches to this repo:
 
 - `master` - The `master` branch contains a setup for gamified cubes with no content on each side apart from backgrounds.
 - `play` - The `play` branch contains a setup for sequential messaging and multiple potential content sources for the sides.
+- `gyro` - The `gyro` branch has the Device Orientation implementation turned on, currently only working on iOS since Android 5.0.
 - `phone` - The `phone` branch contains a simple demo of a 3D CSS Nexus 6.
 
 ### Content
@@ -59,4 +60,12 @@ The JS already checks to see if it is in Celtra and exposes it's init function o
 
 Images and Sounds are preloaded using the `AssetManager`. These assets are cached in memory and should not be accessed in any other way than using the `AssetManager.get` function.
 
+For an image, you can get a `base64` data URI by simply calling `AssetManager.get('{{asset url}}').uri()`. This can be used for anything from setting a background style to a new `Image` source.
+
 Images should be optimised as much as possible using either [ImageOptim](http://imageoptim.com) for pngs and gifs or [JPEGMini](http://www.jpegmini.com) for jpgs.
+
+### Global and Cube-based options
+
+In the debug / config module you will find information about the individual settings and what each do, some are specific to an individual cubes while some are others are global and affect the whole ad.
+
+The format is not really built to have global options change during runtime, and multiple changes will most likely cause some issues, whether graphical or functional.
