@@ -12,10 +12,11 @@ This will start a server running on `localhost` on port `4000`.
 
 ### Branches
 
-There are currently 3 branches to this repo:
+There are currently 4 branches to this repo:
 
 - `master` - The `master` branch contains a setup for gamified cubes with no content on each side apart from backgrounds.
 - `play` - The `play` branch contains a setup for sequential messaging and multiple potential content sources for the sides.
+- `gyro` - The `gyro` branch has the Device Orientation implementation turned on, currently only working on iOS since Android 5.0.
 - `phone` - The `phone` branch contains a simple demo of a 3D CSS Nexus 6.
 
 ### Content

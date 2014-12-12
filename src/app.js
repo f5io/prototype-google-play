@@ -74,7 +74,7 @@ function init() {
         bg.init(bgView);
 
         /* Setup Accelerometer orientation listeners */
-        // Orient(mainView).listen();
+        Orient(mainView).listen();
 
         /* If we are gamifying the ad, load 4 little cubes instead of one big one */
         if (Config.global.useGamification) {
