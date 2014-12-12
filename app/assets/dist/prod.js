@@ -220,7 +220,11 @@ function init() {
                 cubeView.appendChild(cubeContainer);
                 var cube = Object.create(Cube);
                 /* Use `cropLargeFaces` to remove the need for other assets */
-                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, { cropLargeFaces: true, castShadow: false });
+                cube.init(HALF_CUBE_WIDTH, HALF_CUBE_WIDTH, i, 'cube0' + (i + 1), cubeContainer, {
+                    cropLargeFaces: true,
+                    castShadow: false,
+                    normaliseFacialRotation: false
+                });
                 cubes[cube.id] = cube;
                 cube.element.style.left = $.isOdd(i + 1) ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
                 cube.element.style.top = i < 2 ? '-' + HALF_CUBE_WIDTH + 'px' : HALF_CUBE_WIDTH + 'px';
