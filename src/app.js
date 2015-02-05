@@ -50,57 +50,32 @@ function init() {
         pre + 'assets/img/play-books.png',
         pre + 'assets/img/play-movies.png',
         pre + 'assets/img/play-music.png',
-        pre + 'assets/img/play-bg-apps.jpg',
-        pre + 'assets/img/play-bg-books.jpg',
-        pre + 'assets/img/play-bg-movies.jpg',
-        pre + 'assets/img/play-bg-music.jpg',
         pre + 'assets/img/play-logo-lockup.jpg',
-        pre + 'assets/img/side-apps.jpg',
-        pre + 'assets/img/side-books.jpg',
-        pre + 'assets/img/side-movies.jpg',
-        pre + 'assets/img/side-music.jpg',
         pre + 'assets/sound/click.mp3',
-        pre + 'assets/img/content/covers/apps1.png',
-        pre + 'assets/img/content/covers/apps2.png',
-        pre + 'assets/img/content/covers/apps3.png',
-        pre + 'assets/img/content/covers/apps4.png',
-        pre + 'assets/img/content/covers/apps5.png',
-        pre + 'assets/img/content/covers/book1.jpg',
-        pre + 'assets/img/content/covers/book2.jpg',
-        pre + 'assets/img/content/covers/book3.jpg',
-        pre + 'assets/img/content/covers/book4.jpg',
-        pre + 'assets/img/content/covers/book5.jpg',
-        pre + 'assets/img/content/covers/movies1.jpg',
-        pre + 'assets/img/content/covers/movies2.jpg',
-        pre + 'assets/img/content/covers/movies3.jpg',
-        pre + 'assets/img/content/covers/movies4.jpg',
-        pre + 'assets/img/content/covers/movies5.jpg',
-        pre + 'assets/img/content/covers/music1.jpg',
-        pre + 'assets/img/content/covers/music2.jpg',
-        pre + 'assets/img/content/covers/music3.jpg',
-        pre + 'assets/img/content/covers/music4.jpg',
-        pre + 'assets/img/content/covers/music5.jpg',
-        pre + 'assets/img/content/numbers/apps1.png',
-        pre + 'assets/img/content/numbers/apps2.png',
-        pre + 'assets/img/content/numbers/apps3.png',
-        pre + 'assets/img/content/numbers/apps4.png',
-        pre + 'assets/img/content/numbers/apps5.png',
-        pre + 'assets/img/content/numbers/book1.png',
-        pre + 'assets/img/content/numbers/book2.png',
-        pre + 'assets/img/content/numbers/book3.png',
-        pre + 'assets/img/content/numbers/book4.png',
-        pre + 'assets/img/content/numbers/book5.png',
-        pre + 'assets/img/content/numbers/movies1.png',
-        pre + 'assets/img/content/numbers/movies2.png',
-        pre + 'assets/img/content/numbers/movies3.png',
-        pre + 'assets/img/content/numbers/movies4.png',
-        pre + 'assets/img/content/numbers/movies5.png',
-        pre + 'assets/img/content/numbers/music1.png',
-        pre + 'assets/img/content/numbers/music2.png',
-        pre + 'assets/img/content/numbers/music3.png',
-        pre + 'assets/img/content/numbers/music4.png',
-        pre + 'assets/img/content/numbers/music5.png',
-        pre + 'assets/img/content/stars.png'
+        pre + 'assets/img/cubes/apps/side1.jpg',
+        pre + 'assets/img/cubes/apps/side2.jpg',
+        pre + 'assets/img/cubes/apps/side3.jpg',
+        pre + 'assets/img/cubes/apps/side4.jpg',
+        pre + 'assets/img/cubes/apps/side5.jpg',
+        pre + 'assets/img/cubes/apps/side6.jpg',
+        pre + 'assets/img/cubes/books/side1.jpg',
+        pre + 'assets/img/cubes/books/side2.jpg',
+        pre + 'assets/img/cubes/books/side3.jpg',
+        pre + 'assets/img/cubes/books/side4.jpg',
+        pre + 'assets/img/cubes/books/side5.jpg',
+        pre + 'assets/img/cubes/books/side6.jpg',
+        pre + 'assets/img/cubes/movies/side1.jpg',
+        pre + 'assets/img/cubes/movies/side2.jpg',
+        pre + 'assets/img/cubes/movies/side3.jpg',
+        pre + 'assets/img/cubes/movies/side4.jpg',
+        pre + 'assets/img/cubes/movies/side5.jpg',
+        pre + 'assets/img/cubes/movies/side6.jpg',
+        pre + 'assets/img/cubes/music/side1.jpg',
+        pre + 'assets/img/cubes/music/side2.jpg',
+        pre + 'assets/img/cubes/music/side3.jpg',
+        pre + 'assets/img/cubes/music/side4.jpg',
+        pre + 'assets/img/cubes/music/side5.jpg',
+        pre + 'assets/img/cubes/music/side6.jpg'
     ]).preload().then(function() {
 
         loadView.className = 'off';
@@ -118,8 +93,8 @@ function init() {
         });
 
         /* Create and initialise the Background Animation */
-        var bg = Object.create(Background);
-        bg.init(bgView);
+        // var bg = Object.create(Background);
+        // bg.init(bgView);
 
         /* Setup Accelerometer orientation listeners */
         // Orient(mainView).listen();
@@ -132,7 +107,7 @@ function init() {
         }
 
         /* Define the Menu for the Play Experience here */
-        var cubeNames = ['cube01', 'cube02', 'cube03', 'cube04'],
+        var cubeNames = ['music', 'books', 'apps', 'movies'],
             cubeLabels = ['Music', 'Books', 'Apps', 'Movies & TV'],
             menuItems = [];
 
@@ -141,7 +116,7 @@ function init() {
             var cls = i === 0 ? 'selected ' : '';
             var shortName = cubeLabels[i].toLowerCase().split(' ')[0];
             if (i === 0) {
-                document.body.style.background = 'url(' + AssetManager.get(pre + 'assets/img/play-bg-' + shortName + '.jpg').uri() + ') 0 0/cover';
+                //document.body.style.background = 'url(' + AssetManager.get(pre + 'assets/img/play-bg-' + shortName + '.jpg').uri() + ') 0 0/cover';
             }
             el.className = cls + shortName;
             el.setAttribute('cube', name);
@@ -153,7 +128,7 @@ function init() {
                 menuItems.forEach(function(el) {
                     el.classList.remove('selected');
                 });
-                document.body.style.background = 'url(' + AssetManager.get(pre + 'assets/img/play-bg-' + shortName + '.jpg').uri() + ') 0 0/cover';
+                //document.body.style.background = 'url(' + AssetManager.get(pre + 'assets/img/play-bg-' + shortName + '.jpg').uri() + ') 0 0/cover';
                 e.target.classList.add('selected');
                 bigcube.changeCubeNameChangeInvisibleFacesAndRotate(name);
             });
@@ -332,9 +307,9 @@ function init() {
             var cubeContainer = $.getElement('div', 'cube-container', {}, {});
             cubeView.appendChild(cubeContainer);
             bigcube = Object.create(Cube);
-            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'cube01', cubeContainer, {
+            bigcube.init(CUBE_WIDTH, CUBE_WIDTH, 0, 'music', cubeContainer, {
                 useInertia: false,
-                useBackgrounds: false,
+                useBackgrounds: true,
                 useContent: true,
                 isSequential: false,
                 normaliseFacialRotation: true

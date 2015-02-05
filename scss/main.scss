@@ -1,5 +1,12 @@
 @import 'partials/mixins';
 
+$blugrey: #607d8b;
+$light-bluegrey: #9fb4bf;
+$orange: #ef6c00;
+$red: #ed3b3b;
+$green: #689f38;
+$blue: #039be5;
+
 $musicColor: #ef8c3b;
 $booksColor: #3fa2dd;
 $appsColor: #b3ca1d;
@@ -410,6 +417,18 @@ a {
 		position: absolute;
 		transform-style: preserve-3d;
 		overflow: hidden;
+
+		a.btn-buy {
+			display: block;
+			width: 40%;
+			height: 15%;
+			position: absolute;
+			cursor: pointer;
+			bottom: 5%;
+			left: 0;
+			right: 0;
+			margin: auto;
+		}
 
 		.vid {
 			width: 125px;

@@ -66,7 +66,6 @@ Face.getElement = function() {
  *  @return {HTMLElement} - The populated HTML Element.
  */
 Face.populateElement = function(elem) {
-    var c = content.sides[this.name][this.index];
     
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
@@ -88,6 +87,7 @@ Face.populateElement = function(elem) {
     }
 
     if (this.parent.config.useContent) {
+        var c = content.sides[this.name][this.index];
         var span = document.createElement('span');
         span.className = 'content';
         span.innerHTML = c.html(this.parent.config);
@@ -114,8 +114,6 @@ Face.populateElement = function(elem) {
  *  @return {integer} - The index transformed accordingly for Matrix length.
  */
 Face.changeContent = function(index) {
-    index = index >= content.sides[this.name].length ? 0 : index;
-    var c = content.sides[this.name][index];
 
     if (this.parent.config.useBackgrounds) {
         var img = $('img', this.element)[0];
@@ -125,6 +123,8 @@ Face.changeContent = function(index) {
     }
 
     if (this.parent.config.useContent) {
+        index = index >= content.sides[this.name].length ? 0 : index;
+        var c = content.sides[this.name][index];
         var span = $('.content', this.element)[0];
         span.innerHTML = c.html(this.parent.config);
 
