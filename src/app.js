@@ -336,7 +336,7 @@ function init() {
                 useInertia: false,
                 useBackgrounds: false,
                 useContent: true,
-                isSequential: true,
+                isSequential: false,
                 normaliseFacialRotation: true
             });
             bigcube.rotation = bigrot || bigcube.rotation;
