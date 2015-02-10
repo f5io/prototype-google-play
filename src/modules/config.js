@@ -37,6 +37,7 @@ global.useDynamicLighting = true;
 /* Individual cube specific configuration variables */
 var cube = {
     castShadow: true,
+    autoListen: true,
     useInertia: false,
     useBackgrounds: true,
     useContent: false,

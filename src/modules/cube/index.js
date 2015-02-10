@@ -62,7 +62,7 @@ Cube.init = function(width, height, index, name, target, config) {
 
     /* If the cube is set to cast a shadow, create the shadow and init */
     this.shadow = Object.create(Shadow);
-    this.shadow.init(this.width, this.height, this.index, this.name, this.target.parentNode, this);
+    this.shadow.init(this.width * 0.8, this.height * 0.8, this.index, this.name, this.target.parentNode, this);
     this.shadow.opacity = this.config.castShadow ? this.shadow.opacity : 0;
     this.shadow.render();
     
@@ -136,16 +136,7 @@ Cube.init = function(width, height, index, name, target, config) {
 
     /* Translate the Cube on the z axis */
     this.target.style[$.CSS_TRANSFORM] = 'translateZ(-' + (this.width / 2) + 'px)';
-    this.element.addEventListener('touchstart', touchStart);
-
-    /* Double tap to fold out mechanic if the we are gamifying the experience */
-    if (Config.global.useGamification) {
-        this.element.addEventListener('doubletap', function(e) {
-            var face = getFaceFromTarget(e.target);
-            var fold = Object.create(Fold);
-            fold.init(_self, face.index);
-        });
-    }
+    if (this.config.autoListen) addInteractionListener();    
 
     /* Expose private functions as public on the Cube */
     this.getFaceFromTarget = getFaceFromTarget;
@@ -154,6 +145,9 @@ Cube.init = function(width, height, index, name, target, config) {
     this.resetNormalisedFaces = resetNormalisedFaces;
     this.getAxisDefinition = getAxis;
     this.changeCubeNameChangeInvisibleFacesAndRotate = changeCubeNameChangeInvisibleFacesAndRotate;
+    this.forceRotationOfOppositeForFirstFace = rotateOppositeFace.bind(this, this.faces[0], 'updown');
+    this.renderShadow = renderShadow;
+    this.addInteractionListener = addInteractionListener;
 
     /* Private variables */
     var startX, startY, startT,
@@ -161,7 +155,7 @@ Cube.init = function(width, height, index, name, target, config) {
         axisDef, axis,
         direction, dirX, dirY,
         rDirection, oRDirection,
-        current, change,
+        current = $.clone(this.rotation), change,
         hasMoved, changedDirection,
         endTween, oTween, interactedSide,
         moveStartT, moveStartX, moveStartY, lastMoveT;
@@ -175,6 +169,23 @@ Cube.init = function(width, height, index, name, target, config) {
     document.addEventListener('touchend', function() {
         if (decouple) decouple();
     });
+
+    function addInteractionListener() {
+        _self.element.addEventListener('touchstart', touchStart);
+        _self.element.addEventListener('touchstart', function onlyOnce() {
+            $.emitter.emit('first_cube_interaction');
+            _self.element.removeEventListener('touchstart', onlyOnce);
+        });
+
+        /* Double tap to fold out mechanic if the we are gamifying the experience */
+        if (Config.global.useGamification) {
+            _self.element.addEventListener('doubletap', function(e) {
+                var face = getFaceFromTarget(e.target);
+                var fold = Object.create(Fold);
+                fold.init(_self, face.index);
+            });
+        }
+    }
 
     /*
      *  resetNormalisedFaces [private] - Reset all faces Z-rotation back to 0.
@@ -195,6 +206,21 @@ Cube.init = function(width, height, index, name, target, config) {
             if (decouple) decouple = decouple();
             touchStart(e);
         });
+    }
+
+    function renderShadow() {
+        var axisDef = getAxis(_self.rotation);
+
+        ['LR', 'UD'].forEach(function(axisName) {
+            var axis = axisDef[axisName],
+                rot = _self.rotation[axis],
+                nearest = $.nearest(rot, 90);
+
+            var rotVal = Math.abs(rot - nearest) / 45;
+            var scaleVal = _self.shadow.originalScale + ((rotVal * _self.shadow.hypRatio) / 2);
+            _self.shadow.scale[axisName === 'LR' ? 'X' : 'Y'] = scaleVal;
+        });
+        _self.shadow.render();
     }
 
     /*
@@ -342,21 +368,6 @@ Cube.init = function(width, height, index, name, target, config) {
                 if (nNearest !== oNearest && Config.global.useSound) _self.sound.play();
                 _self.rotation[axis] = newRot;
                 _self.render();
-
-
-                if (!_self.config.castShadow) return;
-                if (direction === 'leftright') {
-                    _self.shadow.rotation.Z = determineCalculation(newRot);
-                    _self.shadow.render();
-                } else if (direction === 'updown') {
-                    var rotVal = Math.abs(newRot - nNearest) / 45;
-                    var scaleVal = 1 + ((rotVal * _self.shadow.hypRatio) / 2);
-                    var currentRot = Math.abs(_self.shadow.rotation.Z);
-                    _self.shadow.scale.X = (currentRot === 90 || currentRot === 270 ? scaleVal : 1);
-                    _self.shadow.scale.Y = (currentRot === 0 || currentRot === 180 ? scaleVal : 1);
-                    // _self.shadow.opacity = 0.1 * (scaleVal * 1.5);
-                    _self.shadow.render();
-                }
             });
         }
     }
@@ -457,21 +468,6 @@ Cube.init = function(width, height, index, name, target, config) {
                 _self.rotation[axis] = val;
                 _self.render();
                 oldV = val;
-
-                if (_self.config.castShadow) {
-                    if (direction === 'leftright') {
-                        _self.shadow.rotation.Z = determineCalculation(val);
-                        _self.shadow.render();
-                    } else if (direction === 'updown') {
-                        var rotVal = Math.abs(val - nNearest) / 45;
-                        var scaleVal = 1 + ((rotVal * _self.shadow.hypRatio) / 2);
-                        var currentRot = Math.abs(_self.shadow.rotation.Z);
-                        _self.shadow.scale.X = (currentRot === 90 || currentRot === 270 ? scaleVal : 1);
-                        _self.shadow.scale.Y = (currentRot === 0 || currentRot === 180 ? scaleVal : 1);
-                        // _self.shadow.opacity = 0.1 * (scaleVal * 1.5);
-                        _self.shadow.render();
-                    }
-                }
                 
                 /*
                  * Check if this touchEnd has been fired because we moved over a different
@@ -490,17 +486,6 @@ Cube.init = function(width, height, index, name, target, config) {
                 var endVal = $.norm($.nearest(val, 90) % 360);
                 _self.rotation[axis] = endVal;
                 _self.render();
-
-                if (_self.config.castShadow) {
-                    if (direction === 'leftright') {
-                        _self.shadow.rotation.Z = determineCalculation(endVal);
-                        _self.shadow.render();
-                    } else if (direction === 'updown') {
-                        _self.shadow.scale.X = _self.shadow.scale.Y = 1;
-                        // _self.shadow.opacity = 0.1;
-                        _self.shadow.render();
-                    }
-                }
 
                 dispatchRotationComplete();
                 if (_self.config.isSequential) {
@@ -698,6 +683,8 @@ Cube.init = function(width, height, index, name, target, config) {
 Cube.render = function() {
     /* `super` the Base Class */
     Common.render.call(this);
+
+    if (this.config.castShadow) this.renderShadow();
 
     /* If no dynamic lighting, remove all shadows and exit this function */
     if (!Config.global.useDynamicLighting) {

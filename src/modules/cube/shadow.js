@@ -25,14 +25,15 @@ var Shadow = Object.create(Common);
  *  @param {parent} - The Shadow's parent `Cube`.
  */
 Shadow.init = function(width, height, index, name, target, parent) {
+    this.originalScale = 2;
     this.parent = parent;
-    this.scale = { X : 1, Y : 1 };
-    this.opacity = 0.1;
+    this.scale = { X : this.originalScale, Y : this.originalScale };
+    this.opacity = 0.5;
 
     /* `super` the Base Class */
     Common.init.apply(this, arguments);
 
-    this.rotation.X = 90;
+    // this.rotation.X = 90;
     this.translate.Z = -(this.height * 0.8);
 
     this.hypotenuse = Math.sqrt((this.width * this.width) + (this.height * this.height));
