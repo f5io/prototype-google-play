@@ -30,7 +30,9 @@ function init() {
         HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
         CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50,
         DIRECTION_LEFT = 'left',
-        DIRECTION_RIGHT = 'right';
+        DIRECTION_RIGHT = 'right',
+        ANIMATE_IN = 'in',
+        ANIMATE_OUT = 'out';
 
     /* Cache the views */
     var containerView = $('[role="container"]')[0],
@@ -47,40 +49,24 @@ function init() {
     var pre = Config.global.isCeltra ? Config.BASE_URL : '';
     
     /* Let's preload all the assets we are going to need */
-    AssetManager.add([
-        pre + 'assets/img/play-logo-lockup.jpg',
+    AssetManager.load([
         pre + 'assets/sound/click.mp3',
-        pre + 'assets/img/cubes/apps/side1.jpg',
-        pre + 'assets/img/cubes/apps/side2.jpg',
-        pre + 'assets/img/cubes/apps/side3.jpg',
-        pre + 'assets/img/cubes/apps/side4.jpg',
-        pre + 'assets/img/cubes/apps/side5.jpg',
-        pre + 'assets/img/cubes/apps/side6.jpg',
-        pre + 'assets/img/cubes/books/side1.jpg',
-        pre + 'assets/img/cubes/books/side2.jpg',
-        pre + 'assets/img/cubes/books/side3.jpg',
-        pre + 'assets/img/cubes/books/side4.jpg',
-        pre + 'assets/img/cubes/books/side5.jpg',
-        pre + 'assets/img/cubes/books/side6.jpg',
-        pre + 'assets/img/cubes/movies/side1.jpg',
-        pre + 'assets/img/cubes/movies/side2.jpg',
-        pre + 'assets/img/cubes/movies/side3.jpg',
-        pre + 'assets/img/cubes/movies/side4.jpg',
-        pre + 'assets/img/cubes/movies/side5.jpg',
-        pre + 'assets/img/cubes/movies/side6.jpg',
         pre + 'assets/img/cubes/music/side1.jpg',
         pre + 'assets/img/cubes/music/side2.jpg',
         pre + 'assets/img/cubes/music/side3.jpg',
         pre + 'assets/img/cubes/music/side4.jpg',
         pre + 'assets/img/cubes/music/side5.jpg',
         pre + 'assets/img/cubes/music/side6.jpg'
-    ]).preload().then(function() {
+    ]).then(function() {
 
         // loadView.className = 'off';
 
-        /* All assets are preloaded */
+        /* First cube assets are preloaded */
         var cubes = {}, shadow,
             currentCube, currentIndex = 0;
+
+        var cubeNames = ['music', 'books', 'apps', 'movies'],
+            menuItems = [];
             
         /* Initialise the Debug Panel */
         // Debug.init();
@@ -89,9 +75,6 @@ function init() {
         $.emitter.on('debug_panel', function(isOpen) {
             mainView.classList[isOpen ? 'add' : 'remove']('covered');
         });
-
-        var cubeNames = ['music', 'books', 'apps', 'movies'],
-            menuItems = [];
 
         currentCube = createCube(cubeNames[currentIndex]);
 
@@ -106,9 +89,24 @@ function init() {
                 });
                 document.body.className = menuView.className = 'border-' + name;
                 el.classList.add('selected');
-                var direction = i < currentIndex ? DIRECTION_LEFT : DIRECTION_RIGHT;
+                var direction = i < currentIndex ? DIRECTION_LEFT : DIRECTION_RIGHT,
+                    offDirection = i < currentIndex ? DIRECTION_RIGHT : DIRECTION_LEFT;
                 currentIndex = i;
-                createCube(name, direction);
+
+                loadView.classList.remove('off');
+                var reshowArrows = !arrowView.classList.contains('off');
+                arrowView.classList.add('off');
+                animateCube(ANIMATE_OUT, currentCube, offDirection).then(function() {
+                    var arr = [];
+                    for (var x = 1, len = 6; x <= len; x++) {
+                        arr.push(pre + 'assets/img/cubes/' + name + '/side' + x + '.jpg');
+                    }
+                    AssetManager.load(arr).then(function() {
+                        loadView.classList.add('off');
+                        if (reshowArrows) arrowView.classList.remove('off');
+                        currentCube = createCube(name, direction);
+                    });
+                });
             });
         });
 
@@ -127,84 +125,55 @@ function init() {
             cube.getNormalisedFaceRotation(cube.rotation, true);
             cube.render();
 
-            animateCubeIn(cube, direction);
+            animateCube(ANIMATE_IN, cube, direction);
             Debug.defineCubeProperties([cube]);
             return cube;
         }
 
-        /*
-         *  clearCube - Clears the cube view and emptys the cube hash map.
-         */
-        function clearCube() {
-            cubeView.innerHTML = '';
-            cubes = {};
-        }
+        function animateCube(io, cube, direction) {
+            return new Promise(function(resolve, reject) {
+                var container = cube.target,
+                    shadow = cube.shadow,
+                    offset = $.windowWidth() * 1.2;
 
-        function animateCubeIn(cube, direction) {
-            var fn = function() {};
-            if (currentCube) {
-                animateCubeOut(cube, direction);
-                cube.addInteractionListener();
-            } else {
-                fn = previewRotate;
-            }
+                var fn = function() {
+                    cube.addInteractionListener();
+                };
+                
+                if (io === ANIMATE_IN && !currentCube) {
+                    fn = previewRotate;
+                } else if (io === ANIMATE_OUT) {
+                    fn = function() {
+                        container.parentNode.removeChild(shadow.element);
+                        container.parentNode.removeChild(container);
+                        cube = null;
+                    };
+                }
 
-            var container = cube.target,
-                shadow = cube.shadow;
+                var from = io === ANIMATE_OUT ? 0 : direction === DIRECTION_LEFT ? -offset : offset,
+                    to = io === ANIMATE_IN ? 0 : direction === DIRECTION_LEFT ? -offset : offset;
 
-            var fromX = direction === DIRECTION_LEFT ? -$.windowWidth() * 1.2 : $.windowWidth() * 1.2,
-                toX = 0;
+                container.style[$.CSS_TRANSFORM] += ' translateX(' + from + 'px)';
+                shadow.translate.X = from;
+                shadow.render();
 
-            container.style[$.CSS_TRANSFORM] += ' translateX(' + fromX + 'px)';
-            shadow.translate.X = fromX;
-            shadow.render();
-
-            Interpol.tween()
-                .from(fromX)
-                .to(toX)
-                .ease(Interpol.easing.easeOutCirc)
-                .step(function(val) {
-                    container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateX\(.+\)/g, function() {
-                        return 'translateX(' + val + 'px)';
-                    });
-                    shadow.translate.X = val * 1.1;
-                    shadow.render();
-                })
-                .complete(function() {
-                    fn(cube);
-                })
-                .start();
-        }
-
-        function animateCubeOut(cube, direction) {
-            direction = direction === DIRECTION_LEFT ? DIRECTION_RIGHT : DIRECTION_LEFT;
-
-            var oldCube = currentCube;
-            currentCube = cube;
-
-            var container = oldCube.target,
-                shadow = oldCube.shadow;
-
-            var fromX = 0,
-                toX = direction === DIRECTION_LEFT ? -$.windowWidth() * 1.2 : $.windowWidth() * 1.2;
-
-            Interpol.tween()
-                .from(fromX)
-                .to(toX)
-                .ease(Interpol.easing.easeOutCirc)
-                .step(function(val) {
-                    container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateX\(.+\)/g, function() {
-                        return 'translateX(' + val + 'px)';
-                    });
-                    shadow.translate.X = val * 1.1;
-                    shadow.render();
-                })
-                .complete(function() {
-                    container.parentNode.removeChild(shadow.element);
-                    container.parentNode.removeChild(container);
-                    oldCube = null;
-                })
-                .start();
+                Interpol.tween()
+                    .from(from)
+                    .to(to)
+                    .ease(Interpol.easing[io === ANIMATE_IN ? 'easeOutCirc' : 'easeInCirc'])
+                    .step(function(val) {
+                        container.style[$.CSS_TRANSFORM] = container.style[$.CSS_TRANSFORM].replace(/translateX\(.+\)/g, function() {
+                            return 'translateX(' + val + 'px)';
+                        });
+                        shadow.translate.X = val * 1.1;
+                        shadow.render();
+                    })
+                    .complete(function() {
+                        fn(cube);
+                        resolve();
+                    })
+                    .start();
+            });
         }
 
         function previewRotate(cube) {
@@ -232,10 +201,10 @@ function init() {
                     })
                     .complete(function() {
                         if (axis !== 'LR') {
-                            loadView.className = 'off';
-                            arrowView.className = '';
+                            loadView.classList.add('off');
+                            arrowView.classList.remove('off');
                             var $decouple = $.emitter.on('first_cube_interaction', function() {
-                                arrowView.className = 'off';
+                                arrowView.classList.add('off');
                                 $decouple();
                             });
                             cube.addInteractionListener();

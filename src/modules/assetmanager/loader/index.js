@@ -5,9 +5,6 @@
  *
  */
 
-/* Import modules */
-var Promise = require('bluebird'); // https://github.com/petkaantonov/bluebird
-
 /*
  *  BufferLoader [constructor] - Create a new BufferLoader instance.
  *  @param {files} - An Array on files to load.

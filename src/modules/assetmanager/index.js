@@ -9,71 +9,47 @@
 var BufferLoader = require('./loader');
 var ImageAsset = require('./image');
 var SoundAsset = require('./sound');
-var Promise = require('bluebird'); // https://github.com/petkaantonov/bluebird
 
 /* Define variables */
-var assets = [],
-    buffers = {},
+var buffers = {},
     imageRegex = /\.(gif|jpeg|jpg|png)$/,
     soundRegex = /\.(mp3|mp4|ogg)$/;
 
-var sounds, images;
+function filterByRegex(regex) {
+    return function(asset) {
+        return regex.test(asset);
+    };
+}
 
-var imageLoader, soundLoader;
-
-/*
- *  organiseAssets [private] - Split the assets array into `Sounds` and `Images`.
- *
- *  @return {AssetManager} - Return Asset Manager for chainability.
- */
-function organiseAssets() {
-
-    sounds = assets.filter(function(asset) {
-        return soundRegex.test(asset);
-    });
-
-    images = assets.filter(function(asset) {
-        return imageRegex.test(asset);
-    });
-
-    sounds.forEach(function(sound) {
-        if (!(sound in buffers)) buffers[sound] = SoundAsset(sound);
-    });
-
-    images.forEach(function(image) {
-        if (!(image in buffers)) buffers[image] = ImageAsset(image);
-    });
-
-    return AssetManager;
+function filterAndDefineInBuffersAs(assetType) {
+    return function(asset) {
+        if (!(asset in buffers)) {
+            buffers[asset] = assetType(asset);
+            return true;
+        } else {
+            return false;
+        }
+    };
 }
 
 var AssetManager = {};
 
-/*
- *  AssetManager.add - Add an array or string to the asset list.
- *  @param {urls} - String or Array of assets.
- *
- *  @return {AssetManager} - Return Asset Manager for chainability.
- */
-AssetManager.add = function(urls) {
+AssetManager.load = function(urls) {
+    var assets = [],
+        sounds, images;
     if (typeof urls === 'string') {
         assets.push(urls);
     } else {
         assets = assets.concat(urls);
     }
-    return organiseAssets();
-};
 
-/*
- *  AssetManager.preload - Preload all the items in the asset list.
- *
- *  @return {Promise} - A promise that resolves when all assets are loaded.
- */
-AssetManager.preload = function() {
-    organiseAssets();
+    sounds = assets.filter(filterByRegex(soundRegex))
+        .filter(filterAndDefineInBuffersAs(SoundAsset));
+    images = assets.filter(filterByRegex(imageRegex))
+        .filter(filterAndDefineInBuffersAs(ImageAsset));
 
-    imageLoader = new BufferLoader(images, ImageAsset);
-    soundLoader = new BufferLoader(sounds, SoundAsset);
+    var imageLoader = new BufferLoader(images, ImageAsset),
+        soundLoader = new BufferLoader(sounds, SoundAsset);
 
     return Promise.all(
         [
@@ -101,7 +77,6 @@ AssetManager.preload = function() {
  *  @return {*} - Return the asset from the asset list or undefined.
  */
 AssetManager.get = function(url) {
-    organiseAssets();
     if (url in buffers) return buffers[url];
 };
 

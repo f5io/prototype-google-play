@@ -207,9 +207,7 @@ a {
 	transition: opacity 0.3s ease-out;
 	opacity: 1;
 	z-index: 1;
-	pointer-events: none;
 	
-
 	& > div {
 		position: absolute;
 		top: 0; bottom: 0;
@@ -225,8 +223,7 @@ a {
 
 	&.off {
 		opacity: 0;
-		
-		// display: none;
+		pointer-events: none;
 	}
 
 	

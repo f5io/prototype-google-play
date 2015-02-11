@@ -5,20 +5,20 @@ var express = require('express'),
     app = express();
 
 app.use(compress());
-app.use((function() {
+// app.use((function() {
 
-	spawn('weinre', ['--boundHost', '-all-', '--httpPort', '8080']);
+// 	spawn('weinre', ['--boundHost', '-all-', '--httpPort', '8080']);
 
-	return inject({
-		snippet : ['<script>',
-					// '<![CDATA[',
-						//"document.write('<script src=\"//' + (location.hostname || 'localhost') + ':8080/target/target-script-min.js\"><\\/script>');",
-						"document.write('<script src=\"//' + (location.hostname || 'localhost') + ':35729/livereload.js\"><\\/script>');",
-					// ']]>',
-					'</script>'].join('\n')
-	});
+// 	return inject({
+// 		snippet : ['<script>',
+// 					// '<![CDATA[',
+// 						//"document.write('<script src=\"//' + (location.hostname || 'localhost') + ':8080/target/target-script-min.js\"><\\/script>');",
+// 						"document.write('<script src=\"//' + (location.hostname || 'localhost') + ':35729/livereload.js\"><\\/script>');",
+// 					// ']]>',
+// 					'</script>'].join('\n')
+// 	});
 
-})());
+// })());
 app.use(function(req, res, next) {
 	res.setHeader('X-UA-Compatible', 'IE=edge,chrome=1');
 	next();
