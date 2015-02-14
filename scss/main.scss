@@ -886,31 +886,20 @@ a {
 		}
 
 		&.music {
-			background: rgba($orange, 0);
+			background: rgba($orange, 0.6);
 		}
 
 		&.books {
-			background: rgba($blue, 0);
+			background: rgba($blue, 0.6);
 		}
 
 		&.apps {
-			background: rgba($green, 0);
+			background: rgba($green, 0.6);
 		}
 
 		&.movies {
-			background: rgba($red, 0);
+			background: rgba($red, 0.6);
 		}
-
-
-		// &:before {
-		// 	content: ' ';
-		// 	display: block;
-		// 	width: 30px;
-		// 	height: 32px;
-		// 	left: 0; right: 0;
-		// 	top: -2px;
-		// 	margin: auto;
-		// }
 
 		&:not(:first-child) {
 			// margin-left: 2vw;
