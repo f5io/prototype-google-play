@@ -86,15 +86,15 @@ Face.populateElement = function(elem) {
         elem.appendChild(img);
     }
 
-    if (this.parent.config.useContent) {
-        var c = content.sides[this.name][this.index];
+    if (this.parent.config.useContent && this.index !== 0) {
+        // var c = content.sides[this.name][this.index];
         var span = document.createElement('span');
         span.className = 'content';
-        span.innerHTML = c.html(this.parent.config);
+        span.innerHTML = content.html(this.parent.config);
 
         elem.appendChild(span);
 
-        c.onload(elem, this.parent.config);
+        content.onload(elem, this.parent.config);
     }
 
     var shadow = document.createElement('div');

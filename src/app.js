@@ -12,15 +12,11 @@ var $ = require('./modules/utilities'); // THIS IS NOT JQUERY
 /* Import our modules */
 var Config = require('./modules/config');
 var Cube = require('./modules/cube');
-var Shadow = require('./modules/cube/shadow');
-var Orient = require('./modules/orient');
 var Messaging = require('./modules/messaging');
-var Background = require('./modules/background');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
 /* Import Libraries */
-var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
 
 function init() {
@@ -137,9 +133,14 @@ function init() {
                     offset = $.windowWidth() * 1.2;
 
                 var fn = function() {
+                    arrowView.classList.remove('off');
+                    var $decouple = $.emitter.on('first_cube_interaction', function() {
+                        arrowView.classList.add('off');
+                        $decouple();
+                    });
                     cube.addInteractionListener();
                 };
-                
+
                 if (io === ANIMATE_IN && !currentCube) {
                     fn = previewRotate;
                 } else if (io === ANIMATE_OUT) {

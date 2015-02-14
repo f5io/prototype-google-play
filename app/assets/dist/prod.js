@@ -13,15 +13,11 @@ var $ = require('./modules/utilities'); // THIS IS NOT JQUERY
 /* Import our modules */
 var Config = require('./modules/config');
 var Cube = require('./modules/cube');
-var Shadow = require('./modules/cube/shadow');
-var Orient = require('./modules/orient');
 var Messaging = require('./modules/messaging');
-var Background = require('./modules/background');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
 /* Import Libraries */
-var Stats = require('stats'); // https://github.com/mrdoob/stats.js
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
 
 function init() {
@@ -138,9 +134,14 @@ function init() {
                     offset = $.windowWidth() * 1.2;
 
                 var fn = function() {
+                    arrowView.classList.remove('off');
+                    var $decouple = $.emitter.on('first_cube_interaction', function() {
+                        arrowView.classList.add('off');
+                        $decouple();
+                    });
                     cube.addInteractionListener();
                 };
-                
+
                 if (io === ANIMATE_IN && !currentCube) {
                     fn = previewRotate;
                 } else if (io === ANIMATE_OUT) {
@@ -238,7 +239,7 @@ if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
     $.ready(init);
 }
 
-},{"./modules/assetmanager":5,"./modules/background":9,"./modules/config":10,"./modules/cube":15,"./modules/cube/shadow":17,"./modules/debug":19,"./modules/messaging":20,"./modules/orient":21,"./modules/utilities":22,"interpol":2,"stats":3}],2:[function(require,module,exports){
+},{"./modules/assetmanager":5,"./modules/config":9,"./modules/cube":13,"./modules/debug":17,"./modules/messaging":18,"./modules/utilities":19,"interpol":2}],2:[function(require,module,exports){
 (function (global){
 ;__browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 (function(factory) {
@@ -1159,131 +1160,6 @@ module.exports = Sound;
 
 
 },{"./context":7}],9:[function(require,module,exports){
-var $ = require('../utilities');
-var Interpol = require('interpol');
-var Config = require('../config');
-
-var AssetManager = require('../assetmanager');
-
-var Particle = {
-    x: 0, y: 0,
-    sx: 0, sy: 0,
-    vx: 0, vy: 0,
-    radius: 10, color: '#ffffff'
-};
-
-Particle.init = function(x, y, vx, vy, radius, color) {
-    this.x = x || this.x;
-    this.y = y || this.y;
-    this.sx = x || this.x;
-    this.sy = y || this.y;
-    this.vx = vx || this.vx;
-    this.vy = vy || this.vy;
-    this.radius = radius || this.radius;
-    this.color = color || this.color;
-};
-
-Particle.update = function(width, height, vx, vy) {
-    this.x += this.vx + (vx || 0);
-    this.y += this.vy + (vy || 0);
-    if (this.x < -(this.radius) || (this.x - this.radius) > width || this.y < -(this.radius) || (this.y - this.radius) > height) {
-        this.x = this.sx;
-        this.y = this.sy;
-    }
-};
-
-var ParticleSystem = {
-    particles: []
-};
-
-ParticleSystem.init = function(numOfParticles, startX, startY) {
-    this.particles = [];
-
-    for (var i = 0; i < numOfParticles; i++) {
-        var particle = Object.create(Particle);
-        particle.init(
-            startX,
-            startY,
-            $.floatRange(-1, 1),
-            $.floatRange(-1, 1),
-            $.floatRange(15, 30),
-            'rgba(' + $.range(0, 255) + ',' + $.range(0, 255) + ',' + $.range(0, 255) + ',' + $.floatRange(0.1, 0.7) + ')'
-        );
-        this.particles.push(particle);
-    }
-
-};
-
-
-var Background = {
-    target: undefined,
-    canvas: undefined,
-    context: undefined,
-    system: undefined
-};
-
-Background.init = function(target) {
-    var _self = this;
-    _self.target = target;
-
-    _self.canvas = document.createElement('canvas');
-
-    var setDimensions = (function sD() {
-        _self.canvas.width = $.windowWidth();
-        _self.canvas.height = $.windowHeight();
-        return sD;
-    })();
-
-    _self.system = Object.create(ParticleSystem);
-    _self.system.init(250, _self.canvas.width / 2, _self.canvas.height / 2);
-
-    window.addEventListener('resize', setDimensions);
-
-    _self.target.appendChild(_self.canvas);
-    _self.context = _self.canvas.getContext('2d');
-
-    if (Config.global.useBackgroundAnimation) Interpol.pipeline.add('background', _self.render.bind(_self));
-
-    $.emitter.on('global_config_change', function(key, value) {
-        if (key === 'useBackgroundAnimation') {
-            if (value && !Interpol.pipeline.has('background')) {
-                Interpol.pipeline.add('background', _self.render.bind(_self));
-            } else if (Interpol.pipeline.has('background')) {
-                Interpol.pipeline.remove('background');
-                _self.context.clearRect(0, 0, _self.canvas.width, _self.canvas.height);
-            }
-        }
-    });
-};
-
-Background.render = function() {
-    // console.log(this.context);
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    var img = new Image();
-    img.src = AssetManager.get('assets/img/playlogo-sml.png').uri();
-
-    for (var i = 0; i < this.system.particles.length; i++) {
-        var particle = this.system.particles[i];
-        particle.update(this.canvas.width, this.canvas.height);
-        //particle.update(this.canvas.width, this.canvas.height, $.floatRange(-1, 1), $.floatRange(-1, 0));
-
-        this.context.drawImage(img, particle.x, particle.y, particle.radius, particle.radius);
-
-        // this.context.beginPath();
-        // this.context.fillStyle = particle.color;
-        // this.context.arc(particle.x,particle.y,particle.radius,0,Math.PI*2,true);
-        // this.context.fill();
-    }
-};
-
-Background.remove = function() {
-    this.target.removeChild(this.canvas);
-    Interpol.pipeline.remove('background');
-};
-
-module.exports = Background;
-},{"../assetmanager":5,"../config":10,"../utilities":22,"interpol":2}],10:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Configuration
@@ -1384,7 +1260,7 @@ module.exports = {
     titles: titles,
     descriptions: descriptions
 };
-},{"./utilities":22}],11:[function(require,module,exports){
+},{"./utilities":19}],10:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Component Base Class
@@ -1449,7 +1325,7 @@ var Common = {
 };
 
 module.exports = Common;
-},{"../utilities":22}],12:[function(require,module,exports){
+},{"../utilities":19}],11:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Content Matrix
@@ -1467,168 +1343,14 @@ var pre = Config.global.isCeltra ? Config.BASE_URL : '';
 
 var content = {
 	background : 'assets/img/cubes/{name}/side{i}.jpg', /* Background Image unformatted string */
-	sides : {
-		/* MUSIC */
-		music : [ /* Array of sides with `html` and `onload` functions */
-			{
-				html: function(cfg) {
-					return '';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			}
-		],
-		/* BOOKS */
-		books : [ /* Array of sides with `html` and `onload` functions */
-			{
-				html: function(cfg) {
-					return '';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			}
-		],
-		/* APPS */
-		apps : [ /* Array of sides with `html` and `onload` functions */
-			{
-				html: function(cfg) {
-					return '';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			}
-		],
-		/* MOVIES */
-		movies : [ /* Array of sides with `html` and `onload` functions */
-			{
-				html: function(cfg) {
-					return '';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			},
-			{
-				html: function(cfg) {
-					return '<a class="btn-buy"></a>';
-				},
-				onload: function(el, cfg) {}
-			}
-		]
-	}
+	html: function(cfg) {
+		return '<a class="btn-buy"></a>';
+	},
+	onload: function(el, cfg) {}
 };
 
 module.exports = content;
-},{"../../assetmanager":5,"../../config":10,"../../messaging":20,"../../utilities":22}],13:[function(require,module,exports){
+},{"../../assetmanager":5,"../../config":9,"../../messaging":18,"../../utilities":19}],12:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Face Class
@@ -1717,15 +1439,15 @@ Face.populateElement = function(elem) {
         elem.appendChild(img);
     }
 
-    if (this.parent.config.useContent) {
-        var c = content.sides[this.name][this.index];
+    if (this.parent.config.useContent && this.index !== 0) {
+        // var c = content.sides[this.name][this.index];
         var span = document.createElement('span');
         span.className = 'content';
-        span.innerHTML = c.html(this.parent.config);
+        span.innerHTML = content.html(this.parent.config);
 
         elem.appendChild(span);
 
-        c.onload(elem, this.parent.config);
+        content.onload(elem, this.parent.config);
     }
 
     var shadow = document.createElement('div');
@@ -1778,164 +1500,7 @@ Face.render = function() {
 module.exports = Face;
 
 
-},{"../assetmanager":5,"../config":10,"../utilities":22,"./common":11,"./content":12}],14:[function(require,module,exports){
-var $ = require('../utilities');
-var content = require('./content');
-var Config = require('../config');
-var Vect3 = require('./vect3');
-var AssetManager = require('../assetmanager');
-
-
-var Interpol = require('interpol');
-
-
-var Fold = {
-    init: function(cube, faceIndex) {
-        this.cube = cube;
-        this.width = cube.width;
-        this.height = cube.height;
-        this.target = cube.target;
-        this.faceIndex = faceIndex;
-        this.cubeIndex = cube.index;
-        this.cubeRotation = cube.rotation;
-        this.folds = [];
-
-        var styles = {
-            width: this.width * 2 + 'px',
-            height: this.height * 2 + 'px'
-        };
-
-        styles[$.CSS_TRANSFORM] = 'translateZ(' + Math.ceil(this.width / 2) + 'px)';
-
-        /* Select the `light` from DOM */
-        this.light = $('[role="light"]')[0];
-        
-        /* The light never moves so define the `lightTransform` on `init` */
-        this.lightTransform = $.getTransform(this.light);
-
-        this.element = $.getElement('div', 'fold-container', {}, styles);
-        this.target.appendChild(this.element);
-        populateElement.call(this);
-
-        function populateElement() {
-            for (var i = 0; i < 4; i++) {
-                var styles = {
-                    left: $.isEven(i) ? 0 : this.width + 'px',
-                    top: i > 1 ? this.height + 'px' : 0,
-                    width: this.width + 'px',
-                    height: this.height + 'px'
-                };
-
-                var transformOrigin = i === 0 ? '50% 100%' : i === 1 ? '0 50%' : i === 2 ? '100% 50%' : '50% 0',
-                    startValue = i < 2 ? -91 : 91,
-                    rotationAxis = i === 0 || i === 3 ? 'X' : 'Y';
-
-                styles[$.CSS_TRANSFORM_ORIGIN] = transformOrigin;
-                styles[$.CSS_TRANSFORM] = 'rotate' + rotationAxis + '(' + startValue + 'deg)';
-
-                var fold = $.getElement('div', 'fold', {}, styles);
-
-                var img = new Image();
-                var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
-                var dict = { i : this.faceIndex + 1 };
-                dict.name = this.cube.config.cropLargeFaces ? 'main' : 'cube0' + (i + 1);
-                var src = $.format(str, dict);
-
-                img.src = AssetManager.get(src).uri();
-                img.width = this.width;
-                img.height = this.height;
-
-                if (this.cube.config.cropLargeFaces || this.cube.config.matchSides === false) {
-                    img.width *= 2;
-                    img.height *= 2;
-                    img.style.left = $.isOdd(i + 1) ? 0 : -this.width + 'px';
-                    img.style.top = i < 2 ? 0 : -this.height + 'px';
-                }
-
-                fold.appendChild(img);
-
-                var shadow = $.getElement('div', 'shadow', {}, {});
-                fold.appendChild(shadow);
-
-                this.element.appendChild(fold);
-
-                this.folds.push({
-                    start: startValue,
-                    axis: rotationAxis,
-                    element: fold,
-                    shadow: shadow
-                });
-            }
-        }
-
-        function animateFolds() {
-            var _self = this;
-
-            var indexes = [0, 1, 3, 2, 0, 1, 3, 2];
-            indexes = indexes.splice(indexes.indexOf(this.cubeIndex), 4);
-
-            indexes.forEach(function(index, i, arr) {
-                var fold = _self.folds[index];
-                if (i === 0 && _self.cube.config.matchSides !== false) {
-                    fold.element.style[$.CSS_TRANSFORM] = 'rotate' + fold.axis + '(0deg)';
-                    fold.shadow.style.opacity = 0;
-                    return;
-                }
-
-                var time = 200;
-                var delay = i * time;
-
-                if (i === 0) {
-                    delay = arr.length * time;
-                }
-
-                Interpol.tween()
-                    .from(fold.start)
-                    .to(0)
-                    .delay(delay)
-                    .duration(time)
-                    .step(function(val) {
-                        fold.element.style[$.CSS_TRANSFORM] = 'rotate' + fold.axis + '(' + val + 'deg)';
-
-                        /* If no dynamic lighting, remove all shadows and exit this function */
-                        if (!Config.global.useDynamicLighting) {
-                            fold.shadow.style.opacity = 0;
-                            return;
-                        }
-
-                        /* Dynamic Lighting */
-                        var foldTransform = $.getTransform(fold.element),
-                            lightPosition = Vect3.rotate(_self.lightTransform.translate, Vect3.muls(foldTransform.rotate, -1));
-
-                        var verticies = $.computeVertexData(fold.element);
-                        var center = Vect3.divs(Vect3.sub(verticies.c, verticies.a), 2);
-                        var normal = Vect3.normalize(Vect3.cross(Vect3.sub(verticies.b, verticies.a), Vect3.sub(verticies.c, verticies.a)));
-
-                        var direction = Vect3.normalize(Vect3.sub(lightPosition, center));
-                        var amount = 0.75 - Math.max(0, Vect3.dot(normal, direction)).toFixed(3);
-
-                        if (fold.light !== amount) {
-                            fold.light = amount;
-                            fold.shadow.style.opacity = amount;
-                        }
-                    })
-                    .complete(function() {
-                        var lenToCheck = _self.cube.config.matchSides === false ? 0 : arr.length - 1;
-                        if (i === lenToCheck) $.emitter.emit('fold_out_complete', _self.cubeRotation);
-                    })
-                    .start(function() {
-                        $.emitter.emit('fold_out_start', index, time * 0.5);
-                    });
-
-            });
-        }
-
-        animateFolds.call(this);
-    }
-};
-
-module.exports = Fold;
-},{"../assetmanager":5,"../config":10,"../utilities":22,"./content":12,"./vect3":18,"interpol":2}],15:[function(require,module,exports){
+},{"../assetmanager":5,"../config":9,"../utilities":19,"./common":10,"./content":11}],13:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Class
@@ -1951,7 +1516,6 @@ var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
 var Shadow = require('./shadow');
-var Fold = require('./fold');
 var Config = require('../config');
 var Interpol = require('interpol');
 var AssetManager = require('../assetmanager');
@@ -2114,15 +1678,6 @@ Cube.init = function(width, height, index, name, target, config) {
             $.emitter.emit('first_cube_interaction');
             _self.element.removeEventListener('touchstart', onlyOnce);
         });
-
-        /* Double tap to fold out mechanic if the we are gamifying the experience */
-        if (Config.global.useGamification) {
-            _self.element.addEventListener('doubletap', function(e) {
-                var face = getFaceFromTarget(e.target);
-                var fold = Object.create(Fold);
-                fold.init(_self, face.index);
-            });
-        }
     }
 
     /*
@@ -2651,7 +2206,7 @@ Cube.render = function() {
 };
 
 module.exports = Cube;
-},{"../assetmanager":5,"../config":10,"../utilities":22,"./common":11,"./face":13,"./fold":14,"./matrix":16,"./shadow":17,"./vect3":18,"interpol":2}],16:[function(require,module,exports){
+},{"../assetmanager":5,"../config":9,"../utilities":19,"./common":10,"./face":12,"./matrix":14,"./shadow":15,"./vect3":16,"interpol":2}],14:[function(require,module,exports){
 module.exports={
     "0" : {
         "0" : {
@@ -3290,7 +2845,7 @@ module.exports={
         }
     }
 }
-},{}],17:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Shadow Class
@@ -3362,7 +2917,7 @@ Shadow.render = function() {
 };
 
 module.exports = Shadow;
-},{"../config":10,"../utilities":22,"./common":11}],18:[function(require,module,exports){
+},{"../config":9,"../utilities":19,"./common":10}],16:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Vector3 Mathematics
@@ -3454,7 +3009,7 @@ var Vect3 = {
 };
 
 module.exports = Vect3;
-},{}],19:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var $ = require('../utilities');
 var Config = require('../config');
 var Stats = require('stats');
@@ -3656,7 +3211,7 @@ module.exports = {
     init: init,
     defineCubeProperties: defineCubeProperties
 };
-},{"../config":10,"../utilities":22,"interpol":2,"stats":3}],20:[function(require,module,exports){
+},{"../config":9,"../utilities":19,"interpol":2,"stats":3}],18:[function(require,module,exports){
 var parentWindow,
     parentOrigin;
 
@@ -3683,77 +3238,7 @@ var Messaging = {
 };
 
 module.exports = Messaging;
-},{}],21:[function(require,module,exports){
-var $ = require('../utilities');
-var Interpol = require('interpol');
-var initialValues = { gamma: 0, beta: 0 };
-var cachedValues = { gamma: 0, beta: 0 };
-var prevValues = { gamma: 0, beta: 0 };
-
-var elem;
-
-function handler(e) {
-    console.log('handler');
-
-    prevValues.gamma = cachedValues.gamma;
-    prevValues.beta = cachedValues.beta;
-
-    cachedValues.gamma = initialValues.gamma - e.gamma;
-    cachedValues.beta = initialValues.beta - e.beta;
-}
-
-function render() {
-
-    var dt = 1 / 60;
-    var RC = 0.3;
-    var alpha = dt / (RC + dt);
-
-    var rX = (alpha * cachedValues.beta) + (1 - alpha) * prevValues.beta;
-    var rY = (alpha * cachedValues.gamma) + (1 - alpha) * prevValues.gamma;
-
-    rX *= 0.5;
-    rY *= 0.5;
-
-    elem.style[$.CSS_TRANSFORM] = 'rotateX(' + rX.toFixed(3) + 'deg) rotateY(' + rY.toFixed(3) + 'deg)';
-}
-
-function getInitialValues(callback) {
-    window.addEventListener('deviceorientation', function init(e) {
-        initialValues.gamma = e.gamma;
-        initialValues.beta = e.beta;
-        window.removeEventListener('deviceorientation', init);
-        if (callback) callback();
-    });
-}
-
-function Orient(el) {
-    console.log('orient');
-    elem = el;
-    getInitialValues();
-    return Orient;
-}
-
-Orient.listen = function() {
-    console.log('orient listen');
-    window.addEventListener('deviceorientation', handler);
-    Interpol.pipeline.add('orient', render);
-    return Orient;
-};
-
-Orient.detach = function() {
-    window.removeEventListener('deviceorientation', handler);
-    Interpol.pipeline.remove('orient');
-    return Orient;
-};
-
-Orient.reset = function(fn) {
-    getInitialValues(fn);
-    return Orient;
-};
-
-
-module.exports = Orient;
-},{"../utilities":22,"interpol":2}],22:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Utilities

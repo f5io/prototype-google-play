@@ -13,7 +13,6 @@ var Common = require('./common');
 var matrix = require('./matrix');
 var Face = require('./face');
 var Shadow = require('./shadow');
-var Fold = require('./fold');
 var Config = require('../config');
 var Interpol = require('interpol');
 var AssetManager = require('../assetmanager');
@@ -176,15 +175,6 @@ Cube.init = function(width, height, index, name, target, config) {
             $.emitter.emit('first_cube_interaction');
             _self.element.removeEventListener('touchstart', onlyOnce);
         });
-
-        /* Double tap to fold out mechanic if the we are gamifying the experience */
-        if (Config.global.useGamification) {
-            _self.element.addEventListener('doubletap', function(e) {
-                var face = getFaceFromTarget(e.target);
-                var fold = Object.create(Fold);
-                fold.init(_self, face.index);
-            });
-        }
     }
 
     /*

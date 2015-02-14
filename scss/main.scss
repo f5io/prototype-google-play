@@ -885,6 +885,23 @@ a {
 			max-height: 10.5vh;
 		}
 
+		&.music {
+			background: rgba($orange, 0);
+		}
+
+		&.books {
+			background: rgba($blue, 0);
+		}
+
+		&.apps {
+			background: rgba($green, 0);
+		}
+
+		&.movies {
+			background: rgba($red, 0);
+		}
+
+
 		// &:before {
 		// 	content: ' ';
 		// 	display: block;
@@ -900,6 +917,7 @@ a {
 		}
 
 		&.selected {
+			
 			&.music {
 				background: $orange;
 			}
