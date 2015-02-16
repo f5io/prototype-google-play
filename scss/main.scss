@@ -847,7 +847,8 @@ a {
 	z-index: 0;
 
 	.svg-fill {
-		fill: $light-bluegrey;
+		// fill: $light-bluegrey;
+		fill: rgba(white, 0.6);
 	}
 
 	&.border-music {
@@ -876,7 +877,7 @@ a {
 		font-size: 8px;
 		color: white;
 		// opacity: 0.5;
-		transition: opacity 0.3s ease-out;
+		transition: background 0.3s ease-out;
 		position: relative;
 
 		svg {
@@ -1199,27 +1200,29 @@ a {
 	}
 }
 
-body[class^="border-"]:before {
-	content: ' ';
-	display: block;
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;	
-}
+body, [role="container"] {
+	&[class^="border-"]:before {
+		content: ' ';
+		display: block;
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;	
+	}
 
-body.border-music:before {
-	border-top: 1.5vh solid $orange;
-}
+	&.border-music:before {
+		border-top: 1.5vh solid $orange;
+	}
 
-body.border-books:before {
-	border-top: 1.5vh solid $blue;
-}
+	&.border-books:before {
+		border-top: 1.5vh solid $blue;
+	}
 
-body.border-apps:before {
-	border-top: 1.5vh solid $green;
-}
+	&.border-apps:before {
+		border-top: 1.5vh solid $green;
+	}
 
-body.border-movies:before {
-	border-top: 1.5vh solid $red;
+	&.border-movies:before {
+		border-top: 1.5vh solid $red;
+	}
 }

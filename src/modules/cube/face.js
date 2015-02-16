@@ -90,7 +90,12 @@ Face.populateElement = function(elem) {
         // var c = content.sides[this.name][this.index];
         var span = document.createElement('span');
         span.className = 'content';
-        span.innerHTML = content.html(this.parent.config);
+
+        var html = content.html(this.parent.config);
+        var section = content[this.parent.name];
+        var link = $.format(section._base, { id: section.faces[this.index] });
+
+        span.innerHTML = $.format(html, { link: link });
 
         elem.appendChild(span);
 

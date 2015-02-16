@@ -16,10 +16,16 @@ var Messaging = require('./modules/messaging');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
+var Tracking = require('./modules/tracking');
+
 /* Import Libraries */
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
 
-function init() {
+function init(ctx, unit) {
+
+    if (Config.global.isCeltra) Tracking.init(ctx, window.Creative, unit);
+
+    Tracking.trackEvent('ad-initialized');
 
     /* Constants */
     var CUBE_WIDTH = Math.min(500, Math.round($.windowWidth() * 0.8)), /*250,*/
@@ -55,6 +61,8 @@ function init() {
         pre + 'assets/img/cubes/music/side6.jpg'
     ]).then(function() {
 
+        Tracking.trackEvent('cube-loaded-music');
+
         // loadView.className = 'off';
 
         /* First cube assets are preloaded */
@@ -78,12 +86,15 @@ function init() {
             var el = menuView.querySelector('.' + name);
             menuItems.push(el);
 
-            el.addEventListener('tap', function(e) {
+            el.addEventListener('touchend', function(e) {
                 if (el.classList.contains('selected')) return;
+
+                Tracking.trackEvent('menu-tapped-' + name, true);
+
                 menuItems.forEach(function(el) {
                     el.classList.remove('selected');
                 });
-                document.body.className = menuView.className = 'border-' + name;
+                containerView.className = menuView.className = 'border-' + name;
                 el.classList.add('selected');
                 var direction = i < currentIndex ? DIRECTION_LEFT : DIRECTION_RIGHT,
                     offDirection = i < currentIndex ? DIRECTION_RIGHT : DIRECTION_LEFT;
@@ -98,6 +109,7 @@ function init() {
                         arr.push(pre + 'assets/img/cubes/' + name + '/side' + x + '.jpg');
                     }
                     AssetManager.load(arr).then(function() {
+                        Tracking.trackEvent('cube-loaded-' + name);
                         loadView.classList.add('off');
                         if (reshowArrows) arrowView.classList.remove('off');
                         currentCube = createCube(name, direction);

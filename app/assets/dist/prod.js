@@ -17,10 +17,16 @@ var Messaging = require('./modules/messaging');
 var AssetManager = require('./modules/assetmanager');
 var Debug = require('./modules/debug');
 
+var Tracking = require('./modules/tracking');
+
 /* Import Libraries */
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
 
-function init() {
+function init(ctx, unit) {
+
+    if (Config.global.isCeltra) Tracking.init(ctx, window.Creative, unit);
+
+    Tracking.trackEvent('ad-initialized');
 
     /* Constants */
     var CUBE_WIDTH = Math.min(500, Math.round($.windowWidth() * 0.8)), /*250,*/
@@ -56,6 +62,8 @@ function init() {
         pre + 'assets/img/cubes/music/side6.jpg'
     ]).then(function() {
 
+        Tracking.trackEvent('cube-loaded-music');
+
         // loadView.className = 'off';
 
         /* First cube assets are preloaded */
@@ -79,12 +87,15 @@ function init() {
             var el = menuView.querySelector('.' + name);
             menuItems.push(el);
 
-            el.addEventListener('tap', function(e) {
+            el.addEventListener('touchend', function(e) {
                 if (el.classList.contains('selected')) return;
+
+                Tracking.trackEvent('menu-tapped-' + name, true);
+
                 menuItems.forEach(function(el) {
                     el.classList.remove('selected');
                 });
-                document.body.className = menuView.className = 'border-' + name;
+                containerView.className = menuView.className = 'border-' + name;
                 el.classList.add('selected');
                 var direction = i < currentIndex ? DIRECTION_LEFT : DIRECTION_RIGHT,
                     offDirection = i < currentIndex ? DIRECTION_RIGHT : DIRECTION_LEFT;
@@ -99,6 +110,7 @@ function init() {
                         arr.push(pre + 'assets/img/cubes/' + name + '/side' + x + '.jpg');
                     }
                     AssetManager.load(arr).then(function() {
+                        Tracking.trackEvent('cube-loaded-' + name);
                         loadView.classList.add('off');
                         if (reshowArrows) arrowView.classList.remove('off');
                         currentCube = createCube(name, direction);
@@ -239,7 +251,7 @@ if ($.isDefined(window.screen) && $.isDefined(window.creative)) {
     $.ready(init);
 }
 
-},{"./modules/assetmanager":5,"./modules/config":9,"./modules/cube":13,"./modules/debug":17,"./modules/messaging":18,"./modules/utilities":19,"interpol":2}],2:[function(require,module,exports){
+},{"./modules/assetmanager":5,"./modules/config":9,"./modules/cube":13,"./modules/debug":17,"./modules/messaging":18,"./modules/tracking":19,"./modules/utilities":20,"interpol":2}],2:[function(require,module,exports){
 (function (global){
 ;__browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 (function(factory) {
@@ -1170,7 +1182,7 @@ module.exports = Sound;
 /* General Utilites */
 var $ = require('./utilities');
 
-var BASE_URL = 'http://labs.f5.io/essence/';
+var BASE_URL = 'http://playful-discovery.s3-website-eu-west-1.amazonaws.com/';
 
 var global = {};
 
@@ -1260,7 +1272,7 @@ module.exports = {
     titles: titles,
     descriptions: descriptions
 };
-},{"./utilities":19}],10:[function(require,module,exports){
+},{"./utilities":20}],10:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Component Base Class
@@ -1325,7 +1337,7 @@ var Common = {
 };
 
 module.exports = Common;
-},{"../utilities":19}],11:[function(require,module,exports){
+},{"../utilities":20}],11:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Content Matrix
@@ -1338,19 +1350,65 @@ var $ = require('../../utilities');
 var Config = require('../../config');
 var Messaging = require('../../messaging');
 var AssetManager = require('../../assetmanager');
+var Tracking = require('../../tracking');
 
 var pre = Config.global.isCeltra ? Config.BASE_URL : '';
 
 var content = {
-	background : 'assets/img/cubes/{name}/side{i}.jpg', /* Background Image unformatted string */
+	background: 'assets/img/cubes/{name}/side{i}.jpg', /* Background Image unformatted string */
 	html: function(cfg) {
-		return '<a class="btn-buy"></a>';
+		return '<a href="{link}" class="btn-buy"></a>';
 	},
-	onload: function(el, cfg) {}
+	onload: function(el, cfg) {
+		el.querySelector('a[href]').addEventListener('tap', function(e) {
+			Tracking.trackEvent('cta-clicked', true);
+			Tracking.goToURL(e.target.href);
+		});
+	},
+	music: {
+		'_base': 'https://play.google.com/store/music/album/{id}',
+		faces: {
+			'1': 'Taylor_Swift_1989?id=Bm6l5gvjd6hponuuvzdzk2jwqsm',
+			'2': 'Ed_Sheeran_x?id=Bsyd3qgzwutmzucaiknalamq7my',
+			'3': 'Sam_Smith_In_The_Lonely_Hour?id=Byxhdoru57rixsex7yk3nav7fu4',
+			'4': 'George_Ezra_Wanted_on_Voyage?id=Bxjcdxucqeecxkbgbr4yd5gsywa',
+			'5': 'Paloma_Faith_A_Perfect_Contradiction?id=Bjygw5w5l4lrldxjoxf2ltc3vnq'
+		}
+	},
+	movies: {
+		'_base': 'https://play.google.com/store/movies/details/{id}',
+		faces: {
+			'1': 'Guardians_of_the_Galaxy?id=91tu3aA0NVU',
+			'2': 'Lucy?id=FWEwXgqUm_w',
+			'3': 'Boyhood?id=ZFNvwaFrg4k',
+			'4': '22_Jump_Street?id=-Jdc3nidnAg',
+			'5': 'The_Equalizer?id=LRW2adieBe0'
+		}
+	},
+	apps: {
+		'_base': 'https://play.google.com/store/apps/details?id={id}',
+		faces: {
+			'1': 'com.runtastic.android.pro2',
+			'2': 'com.lightricks.facetune',
+			'3': 'com.mojang.minecraftpe',
+			'4': 'com.coffeestainstudios.goatsimulator',
+			'5': 'com.king.candycrushsodasaga'
+		}
+	},
+	books: {
+		'_base': 'https://play.google.com/store/books/details/{id}',
+		faces: {
+			'1': 'Gillian_Flynn_Gone_Girl?id=hxL2qWMAgv8C',
+			'2': 'John_Green_The_Fault_in_Our_Stars?id=Qk8n0olOX5MC',
+			'3': 'George_R_R_Martin_A_Game_of_Thrones_A_Song_of_Ice_?id=JPDOSzE7Bo0C',
+			'4': 'Veronica_Roth_Divergent_Divergent_Book_1?id=eVHneA77rqEC',
+			'5': 'Suzanne_Collins_The_Hunger_Games?id=YhjcAwAAQBAJ'
+		}
+	}
 };
 
 module.exports = content;
-},{"../../assetmanager":5,"../../config":9,"../../messaging":18,"../../utilities":19}],12:[function(require,module,exports){
+},{"../../assetmanager":5,"../../config":9,"../../messaging":18,"../../tracking":19,"../../utilities":20}],12:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Face Class
@@ -1443,7 +1501,12 @@ Face.populateElement = function(elem) {
         // var c = content.sides[this.name][this.index];
         var span = document.createElement('span');
         span.className = 'content';
-        span.innerHTML = content.html(this.parent.config);
+
+        var html = content.html(this.parent.config);
+        var section = content[this.parent.name];
+        var link = $.format(section._base, { id: section.faces[this.index] });
+
+        span.innerHTML = $.format(html, { link: link });
 
         elem.appendChild(span);
 
@@ -1500,7 +1563,7 @@ Face.render = function() {
 module.exports = Face;
 
 
-},{"../assetmanager":5,"../config":9,"../utilities":19,"./common":10,"./content":11}],13:[function(require,module,exports){
+},{"../assetmanager":5,"../config":9,"../utilities":20,"./common":10,"./content":11}],13:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Cube Class
@@ -1510,6 +1573,7 @@ module.exports = Face;
 
 /* General Utilities */
 var $ = require('../utilities');
+var Tracking = require('../tracking');
 
 /* Import modules */
 var Common = require('./common');
@@ -1890,6 +1954,9 @@ Cube.init = function(width, height, index, name, target, config) {
             }
             return;
         }
+
+        Tracking.trackEvent('cube-interaction-rotate-' + rDirection, true);
+
         /* If the `Interpol` render pipeline has a render function for this Cube, remove it */
         if (Interpol.pipeline.has('render' + _self.id)) Interpol.pipeline.remove('render' + _self.id);
 
@@ -2206,7 +2273,7 @@ Cube.render = function() {
 };
 
 module.exports = Cube;
-},{"../assetmanager":5,"../config":9,"../utilities":19,"./common":10,"./face":12,"./matrix":14,"./shadow":15,"./vect3":16,"interpol":2}],14:[function(require,module,exports){
+},{"../assetmanager":5,"../config":9,"../tracking":19,"../utilities":20,"./common":10,"./face":12,"./matrix":14,"./shadow":15,"./vect3":16,"interpol":2}],14:[function(require,module,exports){
 module.exports={
     "0" : {
         "0" : {
@@ -2917,7 +2984,7 @@ Shadow.render = function() {
 };
 
 module.exports = Shadow;
-},{"../config":9,"../utilities":19,"./common":10}],16:[function(require,module,exports){
+},{"../config":9,"../utilities":20,"./common":10}],16:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Vector3 Mathematics
@@ -3211,7 +3278,7 @@ module.exports = {
     init: init,
     defineCubeProperties: defineCubeProperties
 };
-},{"../config":9,"../utilities":19,"interpol":2,"stats":3}],18:[function(require,module,exports){
+},{"../config":9,"../utilities":20,"interpol":2,"stats":3}],18:[function(require,module,exports){
 var parentWindow,
     parentOrigin;
 
@@ -3239,6 +3306,34 @@ var Messaging = {
 
 module.exports = Messaging;
 },{}],19:[function(require,module,exports){
+var Config = require('./config');
+var Creative, CreativeUnit, ctx;
+
+var Tracking = {
+    init: function(ct, creative, unit) {
+        Creative = creative;
+        CreativeUnit = unit;
+        ctx = ct;
+    },
+    trackEvent: function(event, isInteraction) {
+        if (!Config.global.isCeltra) {
+            console.log('Tracking :: ' + event);
+            return;
+        }
+        if (isInteraction) ctx.trackUserInteraction();
+        Creative.trackCustomEventAction(ctx, { name: event }, function() {});
+    },
+    goToURL: function(href) {
+        if (!Config.global.isCeltra) {
+            console.log('Go To URL :: ' + href);
+            return;
+        }
+        CreativeUnit.goToURLAction(ctx, { url: href, reportLabel: href }, function() {});
+    }
+};
+
+module.exports = Tracking;
+},{"./config":9}],20:[function(require,module,exports){
 /*
  *
  * Google Ad Prototype 2014 - Utilities

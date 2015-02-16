@@ -8,7 +8,7 @@
 /* General Utilites */
 var $ = require('./utilities');
 
-var BASE_URL = 'http://labs.f5.io/essence/';
+var BASE_URL = 'http://playful-discovery.s3-website-eu-west-1.amazonaws.com/';
 
 var global = {};
 

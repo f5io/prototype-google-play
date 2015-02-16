@@ -7,6 +7,7 @@
 
 /* General Utilities */
 var $ = require('../utilities');
+var Tracking = require('../tracking');
 
 /* Import modules */
 var Common = require('./common');
@@ -387,6 +388,9 @@ Cube.init = function(width, height, index, name, target, config) {
             }
             return;
         }
+
+        Tracking.trackEvent('cube-interaction-rotate-' + rDirection, true);
+
         /* If the `Interpol` render pipeline has a render function for this Cube, remove it */
         if (Interpol.pipeline.has('render' + _self.id)) Interpol.pipeline.remove('render' + _self.id);
 
