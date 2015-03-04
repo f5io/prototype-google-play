@@ -33,6 +33,8 @@ global.useSound = true;
 // global.useGamification = true;
 global.useAccelerometer = true;
 global.useDynamicLighting = true;
+global.defaultLanguage = 'en';
+global.defaultEntry = 'music';
 
 /* Individual cube specific configuration variables */
 var cube = {

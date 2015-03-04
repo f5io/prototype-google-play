@@ -119,6 +119,7 @@ a {
 			border-right: 4vw solid transparent;
 			position: absolute;
 			animation: bounce 1.2s infinite ease-in-out;
+			transition: border-top-color 1s linear;
 		}
 		
 		
@@ -1210,19 +1211,43 @@ body, [role="container"] {
 		width: 100%;	
 	}
 
-	&.border-music:before {
-		border-top: 1.5vh solid $orange;
+	&.border-music {
+		[role="arrows"] div.arrow:after {
+			border-top-color: $orange;
+		}
+
+		&:before {
+			border-top: 1.5vh solid $orange;
+		}
 	}
 
-	&.border-books:before {
-		border-top: 1.5vh solid $blue;
+	&.border-books {
+		[role="arrows"] div.arrow:after {
+			border-top-color: $blue;
+		}
+
+		&:before {
+			border-top: 1.5vh solid $blue;
+		}
 	}
 
-	&.border-apps:before {
-		border-top: 1.5vh solid $green;
+	&.border-apps {
+		[role="arrows"] div.arrow:after {
+			border-top-color: $green;
+		}
+
+		&:before {
+			border-top: 1.5vh solid $green;
+		}
 	}
 
-	&.border-movies:before {
-		border-top: 1.5vh solid $red;
+	&.border-movies {
+		[role="arrows"] div.arrow:after {
+			border-top-color: $red;
+		}
+
+		&:before {
+			border-top: 1.5vh solid $red;
+		}
 	}
 }

@@ -66,12 +66,13 @@ Face.getElement = function() {
  *  @return {HTMLElement} - The populated HTML Element.
  */
 Face.populateElement = function(elem) {
-    
+    var lang = Config.global.language;
+
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
         var name = this.parent.config.cropLargeFaces ? 'main' : this.name;
         var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
-        var url = $.format(str, { i: this.index + 1, name: name });
+        var url = $.format(str, { i: this.index + 1, name: name, language: lang });
         img.src = AssetManager.get(url).uri();
         img.width = this.width;
         img.height = this.height;
@@ -93,7 +94,8 @@ Face.populateElement = function(elem) {
 
         var html = content.html(this.parent.config);
         var section = content[this.parent.name];
-        var link = $.format(section._base, { id: section.faces[this.index] });
+        var id = section[lang][this.index];
+        var link = $.format(section._base, { id: id });
 
         span.innerHTML = $.format(html, { link: link });
 
@@ -119,11 +121,12 @@ Face.populateElement = function(elem) {
  *  @return {integer} - The index transformed accordingly for Matrix length.
  */
 Face.changeContent = function(index) {
+    var lang = Config.global.language;
 
     if (this.parent.config.useBackgrounds) {
         var img = $('img', this.element)[0];
-        var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background;
-        var url = $.format(str, { i: index + 1, name: this.name });
+        var str = Config.global.isCeltra ? Config.BASE_URL + content.background : content.background; 
+        var url = $.format(str, { i: index + 1, name: this.name, language: lang });
         img.src = AssetManager.get(url).uri();
     }
 

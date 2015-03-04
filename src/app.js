@@ -21,14 +21,18 @@ var Tracking = require('./modules/tracking');
 /* Import Libraries */
 var Interpol = require('interpol'); // https://github.com/f5io/interpol.js - Slightly modified, sorry there's no docs.
 
-function init(ctx, unit) {
+function init(ctx, unit, initialSection, language) {
+    initialSection = initialSection || Config.global.defaultEntry;
+    language = language || Config.global.defaultLanguage;
+    Config.global.language = language;
+    Config.global.entry = initialSection;
 
     if (Config.global.isCeltra) Tracking.init(ctx, window.Creative, unit);
 
     Tracking.trackEvent('ad-initialized');
 
     /* Constants */
-    var CUBE_WIDTH = Math.min(500, Math.round($.windowWidth() * 0.8)), /*250,*/
+    var CUBE_WIDTH = Math.min(460, Math.round($.windowWidth() * 0.8)), /*250,*/
         HALF_CUBE_WIDTH = CUBE_WIDTH / 2,
         CONTAINER_PERSPECTIVE = (2 * CUBE_WIDTH) + 50,
         DIRECTION_LEFT = 'left',
@@ -53,15 +57,15 @@ function init(ctx, unit) {
     /* Let's preload all the assets we are going to need */
     AssetManager.load([
         pre + 'assets/sound/click.mp3',
-        pre + 'assets/img/cubes/music/side1.jpg',
-        pre + 'assets/img/cubes/music/side2.jpg',
-        pre + 'assets/img/cubes/music/side3.jpg',
-        pre + 'assets/img/cubes/music/side4.jpg',
-        pre + 'assets/img/cubes/music/side5.jpg',
-        pre + 'assets/img/cubes/music/side6.jpg'
+        pre + 'assets/img/cubes/' + language + '/' + initialSection + '/side1.jpg',
+        pre + 'assets/img/cubes/' + language + '/' + initialSection + '/side2.jpg',
+        pre + 'assets/img/cubes/' + language + '/' + initialSection + '/side3.jpg',
+        pre + 'assets/img/cubes/' + language + '/' + initialSection + '/side4.jpg',
+        pre + 'assets/img/cubes/' + language + '/' + initialSection + '/side5.jpg',
+        pre + 'assets/img/cubes/' + language + '/' + initialSection + '/side6.jpg'
     ]).then(function() {
 
-        Tracking.trackEvent('cube-loaded-music');
+        Tracking.trackEvent('cube-loaded-' + initialSection);
 
         // loadView.className = 'off';
 
@@ -72,8 +76,9 @@ function init(ctx, unit) {
         var cubeNames = ['music', 'books', 'apps', 'movies'],
             menuItems = [];
             
-        /* Initialise the Debug Panel */
-        // Debug.init();
+        menuView.querySelector('.' + initialSection).classList.add('selected');
+        containerView.className = menuView.className = 'border-' + initialSection;
+        currentIndex = cubeNames.indexOf(initialSection);
 
         /* When the debug panel is open prevent pointer events on the main view */
         $.emitter.on('debug_panel', function(isOpen) {
@@ -106,7 +111,7 @@ function init(ctx, unit) {
                 animateCube(ANIMATE_OUT, currentCube, offDirection).then(function() {
                     var arr = [];
                     for (var x = 1, len = 6; x <= len; x++) {
-                        arr.push(pre + 'assets/img/cubes/' + name + '/side' + x + '.jpg');
+                        arr.push(pre + 'assets/img/cubes/' + language + '/' + name + '/side' + x + '.jpg');
                     }
                     AssetManager.load(arr).then(function() {
                         Tracking.trackEvent('cube-loaded-' + name);

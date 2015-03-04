@@ -1,5 +1,8 @@
+var $ = require('./utilities');
 var Config = require('./config');
 var Creative, CreativeUnit, ctx;
+
+var EXIT_TRACK = 'cta-exit-lang:{language}-start:{entry}-url:{href}';
 
 var Tracking = {
     init: function(ct, creative, unit) {
@@ -16,6 +19,7 @@ var Tracking = {
         Creative.trackCustomEventAction(ctx, { name: event }, function() {});
     },
     goToURL: function(href) {
+        this.trackEvent($.format(EXIT_TRACK, $.extend({ href: href }, Config.global)));
         if (!Config.global.isCeltra) {
             console.log('Go To URL :: ' + href);
             return;
