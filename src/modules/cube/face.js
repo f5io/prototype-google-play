@@ -66,7 +66,8 @@ Face.getElement = function() {
  *  @return {HTMLElement} - The populated HTML Element.
  */
 Face.populateElement = function(elem) {
-    var lang = Config.global.language;
+    var lang = Config.global.language,
+        entry = Config.global.entry;
 
     if (this.parent.config.useBackgrounds) {
         var img = new Image();
@@ -93,9 +94,10 @@ Face.populateElement = function(elem) {
         span.className = 'content';
 
         var html = content.html(this.parent.config);
-        var section = content[this.parent.name];
-        var id = section[lang][this.index];
-        var link = $.format(section._base, { id: id });
+        var baseURL = content.base;
+        var entryId = content.entryId[entry];
+        var id = $.format(content[this.parent.name][lang][entry][this.index], { e: entryId });
+        var link = $.format(baseURL, { id: id })
 
         span.innerHTML = $.format(html, { link: link });
 
