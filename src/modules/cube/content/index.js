@@ -27,10 +27,42 @@ var content = {
 	},
 	base: 'https://ad.doubleclick.net/ddm/clk/{id}',
 	entryId: {
-		apps: '116389570',
-		books: '116389246',
-		movies: '116389710',
-		music: '116389243'
+		en: {
+			apps: '116389570',
+			books: '116389246',
+			movies: '116389710',
+			music: '116389243'
+		},
+		de: {
+			apps: '116389570',
+			books: '116389246',
+			movies: '116389710',
+			music: '116389243'
+		},
+		fr: {
+			apps: '116389570',
+			books: '116389246',
+			movies: '116389710',
+			music: '116389243'
+		},
+		ru: {
+			apps: '116389570',
+			books: '116389246',
+			movies: '116389710',
+			music: '116389243'
+		},
+		es: {
+			apps: '116389570',
+			books: '116389246',
+			movies: '116389710',
+			music: '116389243'
+		},
+		it: {
+			apps: '116389570',
+			books: '116389246',
+			movies: '116389710',
+			music: '116389243'
+		}
 	},
 	music: { /* Cube category */
 		en: { /* Language */

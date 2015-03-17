@@ -95,7 +95,7 @@ Face.populateElement = function(elem) {
 
         var html = content.html(this.parent.config);
         var baseURL = content.base;
-        var entryId = content.entryId[entry];
+        var entryId = content.entryId[entry][lang];
         var id = $.format(content[this.parent.name][lang][entry][this.index], { e: entryId });
         var link = $.format(baseURL, { id: id })
 
