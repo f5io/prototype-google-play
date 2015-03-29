@@ -89,13 +89,12 @@ Face.populateElement = function(elem) {
     }
 
     if (this.parent.config.useContent && this.index !== 0) {
-        // var c = content.sides[this.name][this.index];
         var span = document.createElement('span');
         span.className = 'content';
 
         var html = content.html(this.parent.config);
         var baseURL = content.base;
-        var entryId = content.entryId[entry][lang];
+        var entryId = content.entryId[lang][entry];
         var id = $.format(content[this.parent.name][lang][entry][this.index], { e: entryId });
         var link = $.format(baseURL, { id: id })
 
