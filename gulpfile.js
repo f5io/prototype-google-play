@@ -20,14 +20,15 @@ var onerror = function(err) {
 };
 
 gulp.task('scripts', function() {
+    gutil.log(gutil.colors.magenta('Compiling 4th Screen!!'));
     return browserify('./src/app.js').bundle()
-        .pipe(source('prod.js'))
+        .pipe(source('4thscr.js'))
         .pipe(plumber({
             errorHandler: onerror
         }))
         .pipe(gulp.dest('./app/assets/dist'))
         .pipe(buffer())
-        .pipe(rename('prod.min.js'))
+        .pipe(rename('4thscr.min.js'))
         .pipe(uglify())
         .pipe(gulp.dest('./app/assets/dist'))
         .pipe(livereload());
